@@ -1,6 +1,9 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
-import { mockForumThreads, forumTopics, forumCourses, ForumThread } from "@/data/forum";
+import { useForumPosts, useCreateForumPost, useUpvotePost, ForumPost } from "@/hooks/useForumPosts";
+import { useCourses } from "@/hooks/useCourses";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -32,34 +35,41 @@ import {
   Search,
   ChevronRight,
   MessageCircle,
+  Loader2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type SortOption = "recent" | "upvoted" | "unanswered";
-type StatusFilter = "all" | "answered" | "unanswered" | "my-posts";
+type StatusFilter = "all" | "answered" | "unanswered";
 
 const CourseForum = () => {
-  const [selectedCourse, setSelectedCourse] = useState("All Courses");
-  const [selectedTopic, setSelectedTopic] = useState("All Topics");
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const { data: posts = [], isLoading } = useForumPosts();
+  const { data: courses = [] } = useCourses();
+  const createPost = useCreateForumPost();
+  const upvotePost = useUpvotePost();
+
+  const [selectedCourse, setSelectedCourse] = useState("all");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [sortBy, setSortBy] = useState<SortOption>("recent");
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedThread, setSelectedThread] = useState<ForumThread | null>(null);
+  const [selectedThread, setSelectedThread] = useState<ForumPost | null>(null);
   const [newPostTitle, setNewPostTitle] = useState("");
   const [newPostContent, setNewPostContent] = useState("");
-  const [replyContent, setReplyContent] = useState("");
+  const [newPostCourse, setNewPostCourse] = useState<string>("");
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
 
-  const filteredThreads = mockForumThreads
-    .filter((thread) => {
-      if (selectedCourse !== "All Courses" && thread.courseTitle !== selectedCourse) return false;
-      if (selectedTopic !== "All Topics" && thread.topic !== selectedTopic) return false;
-      if (statusFilter === "answered" && !thread.isAnswered) return false;
-      if (statusFilter === "unanswered" && thread.isAnswered) return false;
+  const filteredPosts = posts
+    .filter((post) => {
+      if (selectedCourse !== "all" && post.course_id !== selectedCourse) return false;
+      if (statusFilter === "answered" && post.status !== "answered") return false;
+      if (statusFilter === "unanswered" && post.status === "answered") return false;
       if (searchQuery) {
         const query = searchQuery.toLowerCase();
         return (
-          thread.title.toLowerCase().includes(query) ||
-          thread.content.toLowerCase().includes(query)
+          post.title.toLowerCase().includes(query) ||
+          post.content.toLowerCase().includes(query)
         );
       }
       return true;
@@ -67,12 +77,12 @@ const CourseForum = () => {
     .sort((a, b) => {
       switch (sortBy) {
         case "upvoted":
-          return b.upvotes - a.upvotes;
+          return (b.upvotes || 0) - (a.upvotes || 0);
         case "unanswered":
-          return a.isAnswered === b.isAnswered ? 0 : a.isAnswered ? 1 : -1;
+          return a.status === b.status ? 0 : a.status === "answered" ? 1 : -1;
         case "recent":
         default:
-          return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
+          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
       }
     });
 
@@ -85,15 +95,45 @@ const CourseForum = () => {
     return `${days}d ago`;
   };
 
+  const handleCreatePost = async () => {
+    await createPost.mutateAsync({
+      title: newPostTitle,
+      content: newPostContent,
+      courseId: newPostCourse || undefined,
+    });
+    setNewPostTitle("");
+    setNewPostContent("");
+    setNewPostCourse("");
+    setCreateDialogOpen(false);
+  };
+
+  const handleUpvote = async (postId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!user) {
+      navigate("/auth");
+      return;
+    }
+    await upvotePost.mutateAsync(postId);
+  };
+
   if (selectedThread) {
     return (
       <DashboardLayout>
         <ThreadDetail
           thread={selectedThread}
           onBack={() => setSelectedThread(null)}
-          replyContent={replyContent}
-          setReplyContent={setReplyContent}
+          user={user}
         />
+      </DashboardLayout>
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center py-20">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        </div>
       </DashboardLayout>
     );
   }
@@ -109,28 +149,13 @@ const CourseForum = () => {
                 <Label className="text-xs text-muted-foreground">Course</Label>
                 <Select value={selectedCourse} onValueChange={setSelectedCourse}>
                   <SelectTrigger>
-                    <SelectValue />
+                    <SelectValue placeholder="All Courses" />
                   </SelectTrigger>
                   <SelectContent>
-                    {forumCourses.map((course) => (
-                      <SelectItem key={course} value={course}>
-                        {course}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label className="text-xs text-muted-foreground">Topic</Label>
-                <Select value={selectedTopic} onValueChange={setSelectedTopic}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {forumTopics.map((topic) => (
-                      <SelectItem key={topic} value={topic}>
-                        {topic}
+                    <SelectItem value="all">All Courses</SelectItem>
+                    {courses.map((course) => (
+                      <SelectItem key={course.id} value={course.id}>
+                        {course.title}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -144,7 +169,6 @@ const CourseForum = () => {
                     { value: "all", label: "All" },
                     { value: "answered", label: "Answered" },
                     { value: "unanswered", label: "Unanswered" },
-                    { value: "my-posts", label: "My Posts" },
                   ].map((filter) => (
                     <Button
                       key={filter.value}
@@ -170,9 +194,9 @@ const CourseForum = () => {
               <h1 className="text-3xl font-bold text-foreground mb-1">Course Forum</h1>
               <p className="text-muted-foreground">Discuss courses with fellow learners</p>
             </div>
-            <Dialog>
+            <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
               <DialogTrigger asChild>
-                <Button>
+                <Button onClick={() => !user && navigate("/auth")}>
                   <Plus className="w-4 h-4 mr-2" /> New Post
                 </Button>
               </DialogTrigger>
@@ -191,15 +215,15 @@ const CourseForum = () => {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label>Category</Label>
-                    <Select>
+                    <Label>Course (optional)</Label>
+                    <Select value={newPostCourse} onValueChange={setNewPostCourse}>
                       <SelectTrigger>
                         <SelectValue placeholder="Select a course" />
                       </SelectTrigger>
                       <SelectContent>
-                        {forumCourses.slice(1).map((course) => (
-                          <SelectItem key={course} value={course}>
-                            {course}
+                        {courses.map((course) => (
+                          <SelectItem key={course.id} value={course.id}>
+                            {course.title}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -214,7 +238,14 @@ const CourseForum = () => {
                       onChange={(e) => setNewPostContent(e.target.value)}
                     />
                   </div>
-                  <Button className="w-full">Post Question</Button>
+                  <Button 
+                    className="w-full" 
+                    onClick={handleCreatePost}
+                    disabled={!newPostTitle || !newPostContent || createPost.isPending}
+                  >
+                    {createPost.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                    Post Question
+                  </Button>
                 </div>
               </DialogContent>
             </Dialog>
@@ -244,64 +275,73 @@ const CourseForum = () => {
           </div>
 
           {/* Thread List */}
-          <div className="space-y-3">
-            {filteredThreads.map((thread) => (
-              <Card
-                key={thread.id}
-                className="hover:border-primary/50 transition-colors cursor-pointer"
-                onClick={() => setSelectedThread(thread)}
-              >
-                <CardContent className="p-4">
-                  <div className="flex gap-4">
-                    <Avatar className="w-10 h-10">
-                      <AvatarImage src={thread.authorAvatar} />
-                      <AvatarFallback>{thread.authorName[0]}</AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-start justify-between gap-2">
-                        <div>
-                          <div className="flex items-center gap-2 mb-1">
-                            <h3 className="font-semibold text-foreground truncate">
-                              {thread.title}
-                            </h3>
-                            {thread.isAnswered && (
-                              <Badge variant="default" className="gap-1">
-                                <CheckCircle className="w-3 h-3" /> Answered
-                              </Badge>
-                            )}
-                          </div>
-                          <p className="text-sm text-muted-foreground line-clamp-2 mb-2">
-                            {thread.content}
-                          </p>
-                        </div>
-                        <ChevronRight className="w-5 h-5 text-muted-foreground flex-shrink-0" />
-                      </div>
-                      <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                        <span>{thread.authorName}</span>
-                        <Badge variant="outline" className="text-xs">
-                          {thread.courseTitle}
-                        </Badge>
-                        <span className="flex items-center gap-1">
-                          <MessageSquare className="w-3 h-3" /> {thread.replyCount}
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <ThumbsUp className="w-3 h-3" /> {thread.upvotes}
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <Clock className="w-3 h-3" /> {formatTimeAgo(thread.lastActivity)}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-
-          {filteredThreads.length === 0 && (
+          {filteredPosts.length === 0 ? (
             <div className="text-center py-12">
               <MessageCircle className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
               <p className="text-muted-foreground">No discussions found.</p>
+              <p className="text-sm text-muted-foreground mt-2">Be the first to start a conversation!</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {filteredPosts.map((post) => (
+                <Card
+                  key={post.id}
+                  className="hover:border-primary/50 transition-colors cursor-pointer"
+                  onClick={() => setSelectedThread(post)}
+                >
+                  <CardContent className="p-4">
+                    <div className="flex gap-4">
+                      <Avatar className="w-10 h-10">
+                        <AvatarImage src={post.author?.avatar_url || undefined} />
+                        <AvatarFallback>{post.author?.name?.[0] || "U"}</AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-start justify-between gap-2">
+                          <div>
+                            <div className="flex items-center gap-2 mb-1">
+                              <h3 className="font-semibold text-foreground truncate">
+                                {post.title}
+                              </h3>
+                              {post.status === "answered" && (
+                                <Badge variant="default" className="gap-1">
+                                  <CheckCircle className="w-3 h-3" /> Answered
+                                </Badge>
+                              )}
+                              {post.is_pinned && (
+                                <Badge variant="secondary">Pinned</Badge>
+                              )}
+                            </div>
+                            <p className="text-sm text-muted-foreground line-clamp-2 mb-2">
+                              {post.content}
+                            </p>
+                          </div>
+                          <ChevronRight className="w-5 h-5 text-muted-foreground flex-shrink-0" />
+                        </div>
+                        <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                          <span>{post.author?.name || "Anonymous"}</span>
+                          {post.course && (
+                            <Badge variant="outline" className="text-xs">
+                              {post.course.title}
+                            </Badge>
+                          )}
+                          <span className="flex items-center gap-1">
+                            <MessageSquare className="w-3 h-3" /> {post.replies_count || 0}
+                          </span>
+                          <button 
+                            className="flex items-center gap-1 hover:text-primary transition-colors"
+                            onClick={(e) => handleUpvote(post.id, e)}
+                          >
+                            <ThumbsUp className="w-3 h-3" /> {post.upvotes || 0}
+                          </button>
+                          <span className="flex items-center gap-1">
+                            <Clock className="w-3 h-3" /> {formatTimeAgo(post.updated_at)}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
             </div>
           )}
         </div>
@@ -313,13 +353,11 @@ const CourseForum = () => {
 function ThreadDetail({
   thread,
   onBack,
-  replyContent,
-  setReplyContent,
+  user,
 }: {
-  thread: ForumThread;
+  thread: ForumPost;
   onBack: () => void;
-  replyContent: string;
-  setReplyContent: (v: string) => void;
+  user: any;
 }) {
   const formatTimeAgo = (timestamp: string) => {
     const diff = Date.now() - new Date(timestamp).getTime();
@@ -341,82 +379,35 @@ function ThreadDetail({
         <CardContent className="p-6">
           <div className="flex items-start gap-4 mb-4">
             <Avatar className="w-12 h-12">
-              <AvatarImage src={thread.authorAvatar} />
-              <AvatarFallback>{thread.authorName[0]}</AvatarFallback>
+              <AvatarImage src={thread.author?.avatar_url || undefined} />
+              <AvatarFallback>{thread.author?.name?.[0] || "U"}</AvatarFallback>
             </Avatar>
             <div className="flex-1">
               <h1 className="text-xl font-bold text-foreground mb-1">{thread.title}</h1>
               <div className="flex items-center gap-3 text-sm text-muted-foreground">
-                <span>{thread.authorName}</span>
+                <span>{thread.author?.name || "Anonymous"}</span>
                 <span>•</span>
-                <span>{formatTimeAgo(thread.timestamp)}</span>
-                <Badge variant="outline">{thread.courseTitle}</Badge>
-                <Badge variant="secondary">{thread.topic}</Badge>
+                <span>{formatTimeAgo(thread.created_at)}</span>
+                {thread.course && (
+                  <Badge variant="outline">{thread.course.title}</Badge>
+                )}
               </div>
             </div>
           </div>
-          <p className="text-foreground leading-relaxed mb-4">{thread.content}</p>
+          <p className="text-foreground leading-relaxed mb-4 whitespace-pre-wrap">{thread.content}</p>
           <div className="flex items-center gap-4">
             <Button variant="outline" size="sm">
-              <ThumbsUp className="w-4 h-4 mr-1" /> {thread.upvotes}
+              <ThumbsUp className="w-4 h-4 mr-1" /> {thread.upvotes || 0}
             </Button>
           </div>
         </CardContent>
       </Card>
 
-      {/* Replies */}
-      <h3 className="font-semibold text-foreground mb-4">
-        {thread.replies.length} Replies
-      </h3>
-      <div className="space-y-4 mb-6">
-        {thread.replies.map((reply) => (
-          <Card
-            key={reply.id}
-            className={cn(reply.isMarkedAnswer && "border-primary bg-primary/5")}
-          >
-            <CardContent className="p-4">
-              <div className="flex items-start gap-3">
-                <Avatar className="w-10 h-10">
-                  <AvatarImage src={reply.authorAvatar} />
-                  <AvatarFallback>{reply.authorName[0]}</AvatarFallback>
-                </Avatar>
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="font-medium text-foreground">{reply.authorName}</span>
-                    <span className="text-xs text-muted-foreground">
-                      {formatTimeAgo(reply.timestamp)}
-                    </span>
-                    {reply.isMarkedAnswer && (
-                      <Badge variant="default" className="gap-1">
-                        <CheckCircle className="w-3 h-3" /> Accepted Answer
-                      </Badge>
-                    )}
-                  </div>
-                  <p className="text-foreground text-sm leading-relaxed mb-3">{reply.content}</p>
-                  <div className="flex items-center gap-3">
-                    <Button variant="ghost" size="sm">
-                      <ThumbsUp className="w-4 h-4 mr-1" /> {reply.upvotes}
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      {/* Reply Form */}
+      {/* Note about replies */}
       <Card>
-        <CardContent className="p-4">
-          <h4 className="font-medium text-foreground mb-3">Post a Reply</h4>
-          <Textarea
-            placeholder="Share your thoughts or answer..."
-            rows={4}
-            value={replyContent}
-            onChange={(e) => setReplyContent(e.target.value)}
-            className="mb-3"
-          />
-          <Button>Post Reply</Button>
+        <CardContent className="p-6 text-center text-muted-foreground">
+          <MessageCircle className="w-8 h-8 mx-auto mb-2" />
+          <p>Reply functionality coming soon!</p>
         </CardContent>
       </Card>
     </div>
