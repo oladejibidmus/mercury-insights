@@ -14,7 +14,7 @@ const topItems = [{
   id: "dashboard",
   icon: LayoutDashboard,
   label: "Dashboard",
-  path: "/"
+  path: "/dashboard"
 }, {
   id: "explore",
   icon: Compass,
