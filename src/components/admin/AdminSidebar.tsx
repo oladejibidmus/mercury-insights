@@ -1,7 +1,9 @@
-import { LayoutDashboard, Users, BookOpen, MessageSquare, BarChart3, ChevronLeft, ChevronRight, Search, Shield, Settings } from "lucide-react";
+import { LayoutDashboard, Users, BookOpen, MessageSquare, BarChart3, ChevronLeft, ChevronRight, Search, Shield, Settings, LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
 
 interface AdminSidebarProps {
   isExpanded: boolean;
@@ -108,6 +110,15 @@ function SectionHeader({ label, isExpanded }: { label: string; isExpanded: boole
 }
 
 export function AdminSidebar({ isExpanded, onToggle }: AdminSidebarProps) {
+  const { user, signOut } = useAuth();
+  const navigate = useNavigate();
+
+  const handleSignOut = async () => {
+    await signOut();
+    toast.success("Signed out successfully");
+    navigate("/");
+  };
+
   return (
     <aside
       className={cn(
@@ -171,14 +182,23 @@ export function AdminSidebar({ isExpanded, onToggle }: AdminSidebarProps) {
       </nav>
 
       {/* Back to Student Portal */}
-      <div className="px-2 pb-2">
+      <div className="px-2 pb-2 space-y-1">
         <Link
-          to="/"
+          to="/dashboard"
           className="ripple flex items-center gap-3 h-10 rounded-lg px-3 w-full text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-all duration-200 text-sm"
         >
           <ChevronLeft className="w-4 h-4" />
           {isExpanded && <span>Back to Student Portal</span>}
         </Link>
+        {user && (
+          <button
+            onClick={handleSignOut}
+            className="ripple flex items-center gap-3 h-10 rounded-lg px-3 w-full text-sidebar-foreground hover:bg-destructive/10 hover:text-destructive transition-all duration-200"
+          >
+            <LogOut className="w-5 h-5 flex-shrink-0" />
+            {isExpanded && <span className="text-sm font-medium">Sign Out</span>}
+          </button>
+        )}
       </div>
 
       {/* Toggle Button */}
