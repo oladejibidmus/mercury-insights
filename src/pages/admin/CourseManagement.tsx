@@ -10,8 +10,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, MoreVertical, Plus, Edit, Trash2, Eye, Users, Copy, Archive, Star, Loader2 } from "lucide-react";
+import { Search, MoreVertical, Plus, Edit, Trash2, Eye, Users, Copy, Archive, Star, Loader2, BookOpen } from "lucide-react";
 import { useAdminCourses, Course } from "@/hooks/useAdminCourses";
+import { CurriculumBuilder } from "@/components/admin/CurriculumBuilder";
 import { format } from "date-fns";
 
 const CourseManagement = () => {
@@ -19,6 +20,7 @@ const CourseManagement = () => {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [editingCourse, setEditingCourse] = useState<Course | null>(null);
+  const [curriculumCourse, setCurriculumCourse] = useState<Course | null>(null);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -361,6 +363,10 @@ const CourseManagement = () => {
                             <Edit className="w-4 h-4 mr-2" />
                             Edit
                           </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => setCurriculumCourse(course)}>
+                            <BookOpen className="w-4 h-4 mr-2" />
+                            Manage Curriculum
+                          </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => handleDuplicateCourse(course)}>
                             <Copy className="w-4 h-4 mr-2" />
                             Duplicate
@@ -391,6 +397,23 @@ const CourseManagement = () => {
           </Table>
         </CardContent>
       </Card>
+
+      {/* Curriculum Builder Dialog */}
+      <Dialog open={!!curriculumCourse} onOpenChange={(open) => !open && setCurriculumCourse(null)}>
+        <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              {curriculumCourse?.title} - Curriculum
+            </DialogTitle>
+          </DialogHeader>
+          {curriculumCourse && (
+            <CurriculumBuilder
+              courseId={curriculumCourse.id}
+              courseTitle={curriculumCourse.title}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </AdminLayout>
   );
 };
