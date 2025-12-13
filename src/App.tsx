@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
 import { AuthProvider } from "@/contexts/AuthContext";
+import Landing from "./pages/Landing";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import ExploreCourses from "./pages/ExploreCourses";
@@ -15,6 +16,7 @@ import Certificates from "./pages/Certificates";
 import CourseForum from "./pages/CourseForum";
 import QA from "./pages/QA";
 import Auth from "./pages/Auth";
+import AdminSignup from "./pages/AdminSignup";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import UserManagement from "./pages/admin/UserManagement";
 import CourseManagement from "./pages/admin/CourseManagement";
@@ -33,8 +35,10 @@ const App = () => (
           <Sonner />
           <BrowserRouter>
             <Routes>
-              <Route path="/" element={<Index />} />
+              <Route path="/" element={<Landing />} />
+              <Route path="/dashboard" element={<Index />} />
               <Route path="/auth" element={<Auth />} />
+              <Route path="/admin-signup" element={<AdminSignup />} />
               <Route path="/explore-courses" element={<ExploreCourses />} />
               <Route path="/learning-path" element={<LearningPath />} />
               <Route path="/quiz-assessment" element={<QuizAssessment />} />
