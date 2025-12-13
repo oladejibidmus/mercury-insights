@@ -1,10 +1,15 @@
-import { Star, Clock, Users } from "lucide-react";
+import { Star, Clock, Users, Heart } from "lucide-react";
 import { Course } from "@/data/courses";
 import { cn } from "@/lib/utils";
+import { Progress } from "@/components/ui/progress";
 
 interface CourseCardProps {
   course: Course;
   onClick: () => void;
+  isEnrolled?: boolean;
+  isFavorite?: boolean;
+  progress?: number;
+  onToggleFavorite?: (e: React.MouseEvent) => void;
 }
 
 const levelColors = {
@@ -13,7 +18,14 @@ const levelColors = {
   Advanced: "bg-rose-500/10 text-rose-600 dark:text-rose-400",
 };
 
-export function CourseCard({ course, onClick }: CourseCardProps) {
+export function CourseCard({ 
+  course, 
+  onClick, 
+  isEnrolled = false,
+  isFavorite = false,
+  progress = 0,
+  onToggleFavorite 
+}: CourseCardProps) {
   return (
     <button
       onClick={onClick}
@@ -32,6 +44,28 @@ export function CourseCard({ course, onClick }: CourseCardProps) {
         )}>
           {course.level}
         </div>
+        
+        {/* Favorite button */}
+        {onToggleFavorite && (
+          <button
+            onClick={onToggleFavorite}
+            className="absolute top-3 right-3 p-2 rounded-full bg-background/80 hover:bg-background transition-colors"
+          >
+            <Heart 
+              className={cn(
+                "w-4 h-4 transition-colors",
+                isFavorite ? "fill-rose-500 text-rose-500" : "text-muted-foreground hover:text-rose-500"
+              )} 
+            />
+          </button>
+        )}
+
+        {/* Enrolled badge */}
+        {isEnrolled && (
+          <div className="absolute bottom-3 left-3 px-2.5 py-1 rounded-full text-xs font-medium bg-primary/90 text-primary-foreground">
+            Enrolled
+          </div>
+        )}
       </div>
 
       {/* Content */}
@@ -41,6 +75,17 @@ export function CourseCard({ course, onClick }: CourseCardProps) {
         </h3>
         
         <p className="text-sm text-muted-foreground mb-3">{course.instructor}</p>
+
+        {/* Progress bar for enrolled courses */}
+        {isEnrolled && progress > 0 && (
+          <div className="mb-3">
+            <div className="flex justify-between text-xs text-muted-foreground mb-1">
+              <span>Progress</span>
+              <span>{progress}%</span>
+            </div>
+            <Progress value={progress} className="h-1.5" />
+          </div>
+        )}
 
         {/* Rating */}
         <div className="flex items-center gap-2 mb-3">

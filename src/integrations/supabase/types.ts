@@ -38,6 +38,84 @@ export type Database = {
         }
         Relationships: []
       }
+      course_progress: {
+        Row: {
+          completed_modules: number[] | null
+          course_id: string
+          id: string
+          last_accessed_at: string
+          lesson_index: number
+          module_index: number
+          progress_percentage: number
+          user_id: string
+        }
+        Insert: {
+          completed_modules?: number[] | null
+          course_id: string
+          id?: string
+          last_accessed_at?: string
+          lesson_index?: number
+          module_index?: number
+          progress_percentage?: number
+          user_id: string
+        }
+        Update: {
+          completed_modules?: number[] | null
+          course_id?: string
+          id?: string
+          last_accessed_at?: string
+          lesson_index?: number
+          module_index?: number
+          progress_percentage?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
+      enrollments: {
+        Row: {
+          course_id: string
+          enrolled_at: string
+          id: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          course_id: string
+          enrolled_at?: string
+          id?: string
+          status?: string
+          user_id: string
+        }
+        Update: {
+          course_id?: string
+          enrolled_at?: string
+          id?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      favorites: {
+        Row: {
+          course_id: string
+          created_at: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          course_id: string
+          created_at?: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          course_id?: string
+          created_at?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       transactions: {
         Row: {
           account_id: string

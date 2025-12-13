@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import { CourseFilters } from "@/components/courses/CourseFilters";
 import { CourseCard } from "@/components/courses/CourseCard";
@@ -6,6 +7,10 @@ import { CourseSearch } from "@/components/courses/CourseSearch";
 import { CourseSort } from "@/components/courses/CourseSort";
 import { CoursePreviewModal } from "@/components/courses/CoursePreviewModal";
 import { mockCourses, Course } from "@/data/courses";
+import { useCourseActions } from "@/hooks/useCourseActions";
+import { useAuth } from "@/contexts/AuthContext";
+import { Button } from "@/components/ui/button";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const ExploreCourses = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -15,9 +20,32 @@ const ExploreCourses = () => {
   const [selectedDuration, setSelectedDuration] = useState("All");
   const [selectedRating, setSelectedRating] = useState("All");
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
+  const [activeTab, setActiveTab] = useState("all");
+  const [actionLoading, setActionLoading] = useState(false);
+  
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const {
+    enrolledCourses,
+    favoriteCourses,
+    courseProgress,
+    enrollInCourse,
+    unenrollFromCourse,
+    toggleFavorite,
+    isEnrolled,
+    isFavorite,
+    getProgress,
+  } = useCourseActions();
 
   const filteredCourses = useMemo(() => {
     let courses = [...mockCourses];
+
+    // Tab filter
+    if (activeTab === "enrolled") {
+      courses = courses.filter((c) => enrolledCourses.includes(c.id));
+    } else if (activeTab === "favorites") {
+      courses = courses.filter((c) => favoriteCourses.includes(c.id));
+    }
 
     // Search filter
     if (searchQuery) {
@@ -80,13 +108,44 @@ const ExploreCourses = () => {
     }
 
     return courses;
-  }, [searchQuery, sortBy, selectedCategory, selectedLevel, selectedDuration, selectedRating]);
+  }, [searchQuery, sortBy, selectedCategory, selectedLevel, selectedDuration, selectedRating, activeTab, enrolledCourses, favoriteCourses]);
 
   const handleClearFilters = () => {
     setSelectedCategory("All");
     setSelectedLevel("All");
     setSelectedDuration("All");
     setSelectedRating("All");
+  };
+
+  const handleEnroll = async () => {
+    if (!user) {
+      navigate("/auth");
+      return;
+    }
+    if (selectedCourse) {
+      setActionLoading(true);
+      await enrollInCourse(selectedCourse.id);
+      setActionLoading(false);
+    }
+  };
+
+  const handleUnenroll = async () => {
+    if (selectedCourse) {
+      setActionLoading(true);
+      await unenrollFromCourse(selectedCourse.id);
+      setActionLoading(false);
+    }
+  };
+
+  const handleToggleFavorite = async (courseId: string, e?: React.MouseEvent) => {
+    if (e) {
+      e.stopPropagation();
+    }
+    if (!user) {
+      navigate("/auth");
+      return;
+    }
+    await toggleFavorite(courseId);
   };
 
   return (
@@ -96,6 +155,21 @@ const ExploreCourses = () => {
         <h1 className="text-3xl font-bold text-foreground mb-2">Explore Courses</h1>
         <p className="text-muted-foreground">Discover {mockCourses.length} courses to expand your skills</p>
       </div>
+
+      {/* Tabs for filtering */}
+      {user && (
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-4">
+          <TabsList>
+            <TabsTrigger value="all">All Courses</TabsTrigger>
+            <TabsTrigger value="enrolled">
+              My Courses ({enrolledCourses.length})
+            </TabsTrigger>
+            <TabsTrigger value="favorites">
+              Favorites ({favoriteCourses.length})
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
+      )}
 
       {/* Search & Sort Bar */}
       <div className="flex flex-col sm:flex-row gap-4 mb-4">
@@ -131,6 +205,10 @@ const ExploreCourses = () => {
               key={course.id}
               course={course}
               onClick={() => setSelectedCourse(course)}
+              isEnrolled={isEnrolled(course.id)}
+              isFavorite={isFavorite(course.id)}
+              progress={getProgress(course.id)}
+              onToggleFavorite={(e) => handleToggleFavorite(course.id, e)}
             />
           ))}
         </div>
@@ -151,6 +229,13 @@ const ExploreCourses = () => {
         course={selectedCourse}
         isOpen={!!selectedCourse}
         onClose={() => setSelectedCourse(null)}
+        isEnrolled={selectedCourse ? isEnrolled(selectedCourse.id) : false}
+        isFavorite={selectedCourse ? isFavorite(selectedCourse.id) : false}
+        progress={selectedCourse ? getProgress(selectedCourse.id) : 0}
+        onEnroll={handleEnroll}
+        onUnenroll={handleUnenroll}
+        onToggleFavorite={selectedCourse ? () => handleToggleFavorite(selectedCourse.id) : undefined}
+        isLoading={actionLoading}
       />
     </DashboardLayout>
   );
