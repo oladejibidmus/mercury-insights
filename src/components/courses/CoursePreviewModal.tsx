@@ -1,12 +1,20 @@
-import { X, Star, Clock, Users, BookOpen, User } from "lucide-react";
+import { X, Star, Clock, Users, BookOpen, User, Heart, Loader2 } from "lucide-react";
 import { Course } from "@/data/courses";
 import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
 
 interface CoursePreviewModalProps {
   course: Course | null;
   isOpen: boolean;
   onClose: () => void;
+  isEnrolled?: boolean;
+  isFavorite?: boolean;
+  progress?: number;
+  onEnroll?: () => Promise<void>;
+  onUnenroll?: () => Promise<void>;
+  onToggleFavorite?: () => Promise<void>;
+  isLoading?: boolean;
 }
 
 const levelColors = {
@@ -15,7 +23,18 @@ const levelColors = {
   Advanced: "bg-rose-500/10 text-rose-600 dark:text-rose-400",
 };
 
-export function CoursePreviewModal({ course, isOpen, onClose }: CoursePreviewModalProps) {
+export function CoursePreviewModal({ 
+  course, 
+  isOpen, 
+  onClose,
+  isEnrolled = false,
+  isFavorite = false,
+  progress = 0,
+  onEnroll,
+  onUnenroll,
+  onToggleFavorite,
+  isLoading = false,
+}: CoursePreviewModalProps) {
   if (!isOpen || !course) return null;
 
   return (
@@ -52,12 +71,45 @@ export function CoursePreviewModal({ course, isOpen, onClose }: CoursePreviewMod
             )}>
               {course.level}
             </div>
+            
+            {/* Favorite button */}
+            {onToggleFavorite && (
+              <button
+                onClick={() => onToggleFavorite()}
+                className="absolute top-4 right-14 p-2.5 rounded-full bg-background/80 hover:bg-background transition-colors"
+              >
+                <Heart 
+                  className={cn(
+                    "w-5 h-5 transition-colors",
+                    isFavorite ? "fill-rose-500 text-rose-500" : "text-muted-foreground hover:text-rose-500"
+                  )} 
+                />
+              </button>
+            )}
           </div>
 
           <div className="p-6 -mt-12 relative">
             {/* Title & Meta */}
-            <h2 className="text-2xl font-bold text-foreground mb-2">{course.title}</h2>
+            <div className="flex items-start justify-between gap-4 mb-2">
+              <h2 className="text-2xl font-bold text-foreground">{course.title}</h2>
+              {isEnrolled && (
+                <span className="px-3 py-1 rounded-full text-xs font-medium bg-primary/10 text-primary shrink-0">
+                  Enrolled
+                </span>
+              )}
+            </div>
             <p className="text-muted-foreground mb-4">by {course.instructor}</p>
+
+            {/* Progress for enrolled courses */}
+            {isEnrolled && (
+              <div className="mb-4 p-4 bg-muted/50 rounded-lg">
+                <div className="flex justify-between text-sm mb-2">
+                  <span className="text-muted-foreground">Your Progress</span>
+                  <span className="font-medium text-foreground">{progress}%</span>
+                </div>
+                <Progress value={progress} className="h-2" />
+              </div>
+            )}
 
             {/* Stats */}
             <div className="flex flex-wrap items-center gap-4 mb-6">
@@ -144,10 +196,33 @@ export function CoursePreviewModal({ course, isOpen, onClose }: CoursePreviewMod
               </div>
             </div>
 
-            {/* Enroll Button */}
-            <Button className="w-full h-12 text-base font-semibold">
-              Enroll Now
-            </Button>
+            {/* Action Buttons */}
+            <div className="flex gap-3">
+              {isEnrolled ? (
+                <>
+                  <Button className="flex-1 h-12 text-base font-semibold">
+                    Continue Learning
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    className="h-12"
+                    onClick={onUnenroll}
+                    disabled={isLoading}
+                  >
+                    {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Unenroll"}
+                  </Button>
+                </>
+              ) : (
+                <Button 
+                  className="w-full h-12 text-base font-semibold"
+                  onClick={onEnroll}
+                  disabled={isLoading}
+                >
+                  {isLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                  Enroll Now
+                </Button>
+              )}
+            </div>
           </div>
         </div>
       </div>
