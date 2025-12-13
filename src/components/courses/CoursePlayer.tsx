@@ -1,9 +1,10 @@
-import { useState } from "react";
-import { X, ChevronLeft, ChevronRight, CheckCircle, PlayCircle, FileText, HelpCircle, BookOpen, Clock, User } from "lucide-react";
+import { useState, useEffect } from "react";
+import { X, ChevronLeft, ChevronRight, CheckCircle, PlayCircle, FileText, HelpCircle, BookOpen, Clock, User, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
 
 interface Lesson {
   id: string;
@@ -12,6 +13,8 @@ interface Lesson {
   type: "video" | "reading" | "quiz";
   completed: boolean;
   lessonIndex: number;
+  videoUrl?: string;
+  content?: string;
 }
 
 interface Module {
@@ -20,6 +23,15 @@ interface Module {
   duration: string;
   completed: boolean;
   lessons: Lesson[];
+}
+
+interface DBLesson {
+  id: string;
+  title: string;
+  video_url: string | null;
+  content: string | null;
+  duration: string | null;
+  type: string;
 }
 
 interface CoursePlayerProps {
@@ -35,6 +47,7 @@ interface CoursePlayerProps {
 }
 
 export function CoursePlayer({
+  courseId,
   courseTitle,
   instructor,
   modules,
@@ -46,12 +59,45 @@ export function CoursePlayer({
 }: CoursePlayerProps) {
   const [isCompleting, setIsCompleting] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [dbLessons, setDbLessons] = useState<Record<string, DBLesson>>({});
+  const [loadingLesson, setLoadingLesson] = useState(false);
+
+  // Fetch lessons from database for this course
+  useEffect(() => {
+    const fetchLessons = async () => {
+      const { data: modulesData } = await supabase
+        .from("course_modules")
+        .select("id")
+        .eq("course_id", courseId);
+
+      if (modulesData && modulesData.length > 0) {
+        const moduleIds = modulesData.map((m) => m.id);
+        const { data: lessonsData } = await supabase
+          .from("course_lessons")
+          .select("id, title, video_url, content, duration, type")
+          .in("module_id", moduleIds);
+
+        if (lessonsData) {
+          const lessonsMap: Record<string, DBLesson> = {};
+          lessonsData.forEach((lesson) => {
+            lessonsMap[lesson.id] = lesson;
+          });
+          setDbLessons(lessonsMap);
+        }
+      }
+    };
+
+    fetchLessons();
+  }, [courseId]);
 
   // Find current lesson
   const allLessons = modules.flatMap((m) => m.lessons);
   const currentLessonIndex = allLessons.findIndex((l) => l.id === currentLessonId);
   const currentLesson = allLessons[currentLessonIndex];
   const currentModule = modules.find((m) => m.lessons.some((l) => l.id === currentLessonId));
+
+  // Get DB lesson data if available
+  const currentDbLesson = currentLesson ? dbLessons[currentLesson.id] : null;
 
   const prevLesson = currentLessonIndex > 0 ? allLessons[currentLessonIndex - 1] : null;
   const nextLesson = currentLessonIndex < allLessons.length - 1 ? allLessons[currentLessonIndex + 1] : null;
@@ -82,32 +128,57 @@ export function CoursePlayer({
   };
 
   const getVideoContent = (lessonType: string, lessonTitle: string) => {
+    // Use DB content if available
+    const videoUrl = currentDbLesson?.video_url;
+    const lessonContent = currentDbLesson?.content;
+
     if (lessonType === "video") {
+      if (videoUrl) {
+        // Extract YouTube video ID and create embed URL
+        const getYouTubeEmbedUrl = (url: string) => {
+          const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
+          const match = url.match(regExp);
+          const videoId = match && match[2].length === 11 ? match[2] : null;
+          return videoId ? `https://www.youtube.com/embed/${videoId}` : url;
+        };
+
+        return (
+          <div className="aspect-video bg-black rounded-lg overflow-hidden">
+            <iframe
+              src={getYouTubeEmbedUrl(videoUrl)}
+              title={lessonTitle}
+              className="w-full h-full"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+            />
+          </div>
+        );
+      }
+
+      // No video URL - show placeholder
       return (
-        <div className="aspect-video bg-black rounded-lg overflow-hidden">
-          <iframe
-            src="https://www.youtube.com/embed/dQw4w9WgXcQ"
-            title={lessonTitle}
-            className="w-full h-full"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-            allowFullScreen
-          />
+        <div className="aspect-video bg-muted rounded-lg flex items-center justify-center">
+          <div className="text-center p-8">
+            <PlayCircle className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
+            <h3 className="text-xl font-semibold mb-2">{lessonTitle}</h3>
+            <p className="text-muted-foreground">Video content not yet available.</p>
+          </div>
         </div>
       );
     }
 
     if (lessonType === "reading") {
       return (
-        <div className="aspect-video bg-muted rounded-lg flex items-center justify-center">
-          <div className="text-center p-8 max-w-2xl">
-            <FileText className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-xl font-semibold mb-4">{lessonTitle}</h3>
-            <p className="text-muted-foreground leading-relaxed">
-              This is a reading lesson. In a real application, this would contain the lesson content, 
-              documentation, code examples, and other learning materials. The content would be rich text 
-              with proper formatting, images, and interactive elements.
-            </p>
-          </div>
+        <div className="bg-muted/50 rounded-lg p-8">
+          <FileText className="w-12 h-12 text-muted-foreground mb-4" />
+          <h3 className="text-xl font-semibold mb-4">{lessonTitle}</h3>
+          {lessonContent ? (
+            <div className="prose prose-sm dark:prose-invert max-w-none">
+              <p className="text-foreground/80 leading-relaxed whitespace-pre-wrap">{lessonContent}</p>
+            </div>
+          ) : (
+            <p className="text-muted-foreground">Reading content not yet available.</p>
+          )}
         </div>
       );
     }
