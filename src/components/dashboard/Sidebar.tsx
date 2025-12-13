@@ -1,7 +1,9 @@
-import { LayoutDashboard, Compass, Route, ClipboardCheck, FolderKanban, Award, MessageSquare, HelpCircle, ChevronLeft, ChevronRight, Search, Shield } from "lucide-react";
+import { LayoutDashboard, Compass, Route, ClipboardCheck, FolderKanban, Award, MessageSquare, HelpCircle, ChevronLeft, ChevronRight, Search, Shield, LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
 
 interface SidebarProps {
   isExpanded: boolean;
@@ -126,6 +128,14 @@ export function Sidebar({
   isExpanded,
   onToggle
 }: SidebarProps) {
+  const { user, signOut } = useAuth();
+  const navigate = useNavigate();
+
+  const handleSignOut = async () => {
+    await signOut();
+    toast.success("Signed out successfully");
+    navigate("/");
+  };
   return (
     <aside className={cn(
       "fixed left-0 top-0 h-screen flex flex-col bg-sidebar border-r border-sidebar-border transition-all duration-300 z-50",
@@ -171,8 +181,18 @@ export function Sidebar({
         <NavItem {...adminItem} isExpanded={isExpanded} />
       </nav>
 
-      {/* Toggle Button */}
-      <div className="py-4 px-2 border-t border-sidebar-border">
+      {/* Sign Out & Toggle */}
+      <div className="py-4 px-2 border-t border-sidebar-border space-y-1">
+        {user && (
+          <button
+            onClick={handleSignOut}
+            className="ripple flex items-center gap-3 h-10 rounded-lg px-3 w-full text-sidebar-foreground hover:bg-destructive/10 hover:text-destructive transition-all duration-200"
+            title={isExpanded ? "Sign out" : "Sign out"}
+          >
+            <LogOut className="w-5 h-5 flex-shrink-0" />
+            {isExpanded && <span className="text-sm font-medium">Sign Out</span>}
+          </button>
+        )}
         <button
           onClick={onToggle}
           className="ripple flex items-center gap-3 h-10 rounded-lg px-3 w-full text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-all duration-200"
