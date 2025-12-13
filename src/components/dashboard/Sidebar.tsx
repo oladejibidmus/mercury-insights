@@ -60,7 +60,7 @@ function NavItem({
   isExpanded
 }: NavItemProps) {
   return <button className={cn("ripple flex items-center gap-3 h-10 rounded-lg transition-all duration-200 px-3 w-full", isActive ? "bg-primary/10 text-primary" : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground")} title={!isExpanded ? label : undefined}>
-      <Icon className="w-5 h-5 flex-shrink-0" />
+      <Icon className="w-5 h-5 flex-shrink-0 text-destructive-foreground" />
       {isExpanded && <>
           <span className="text-sm truncate flex-1 text-left font-sans font-normal">{label}</span>
           {badge && <span className="bg-muted text-muted-foreground text-xs px-2 py-0.5 rounded-full">
