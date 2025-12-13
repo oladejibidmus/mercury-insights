@@ -1,30 +1,83 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
-import { mockLearningPath, LearningCourse } from "@/data/learningPath";
+import { mockCourses, Course } from "@/data/courses";
+import { useCourseActions } from "@/hooks/useCourseActions";
+import { useAuth } from "@/contexts/AuthContext";
 import { Progress } from "@/components/ui/progress";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { CheckCircle, Circle, PlayCircle, FileText, HelpCircle, MapPin, ChevronRight } from "lucide-react";
+import { CheckCircle, Circle, PlayCircle, FileText, HelpCircle, MapPin, ChevronRight, BookOpen } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type FilterStatus = "all" | "in-progress" | "completed";
 
 const LearningPath = () => {
   const [filter, setFilter] = useState<FilterStatus>("all");
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const { enrolledCourses, courseProgress, getProgress, loading } = useCourseActions();
 
-  const filteredCourses = mockLearningPath.filter((course) => {
+  // Get enrolled courses with their progress
+  const enrolledCoursesData = mockCourses
+    .filter((course) => enrolledCourses.includes(course.id))
+    .map((course) => {
+      const progress = getProgress(course.id);
+      let status: "completed" | "in-progress" | "not-started" = "not-started";
+      if (progress >= 100) status = "completed";
+      else if (progress > 0) status = "in-progress";
+      return { ...course, progress, status };
+    });
+
+  const filteredCourses = enrolledCoursesData.filter((course) => {
     if (filter === "all") return true;
     if (filter === "in-progress") return course.status === "in-progress";
     if (filter === "completed") return course.status === "completed";
     return true;
   });
 
-  const totalProgress = Math.round(
-    mockLearningPath.reduce((acc, c) => acc + c.progress, 0) / mockLearningPath.length
-  );
+  const totalProgress = enrolledCoursesData.length > 0
+    ? Math.round(enrolledCoursesData.reduce((acc, c) => acc + c.progress, 0) / enrolledCoursesData.length)
+    : 0;
 
-  const completedCourses = mockLearningPath.filter((c) => c.status === "completed").length;
+  const completedCourses = enrolledCoursesData.filter((c) => c.status === "completed").length;
+
+  if (!user) {
+    return (
+      <DashboardLayout>
+        <div className="flex flex-col items-center justify-center py-20">
+          <BookOpen className="w-16 h-16 text-muted-foreground mb-4" />
+          <h2 className="text-2xl font-bold text-foreground mb-2">Sign in to view your learning path</h2>
+          <p className="text-muted-foreground mb-6">Track your progress and continue learning</p>
+          <Button onClick={() => navigate("/auth")}>Sign In</Button>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  if (loading) {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center py-20">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  if (enrolledCoursesData.length === 0) {
+    return (
+      <DashboardLayout>
+        <div className="flex flex-col items-center justify-center py-20">
+          <BookOpen className="w-16 h-16 text-muted-foreground mb-4" />
+          <h2 className="text-2xl font-bold text-foreground mb-2">No courses enrolled yet</h2>
+          <p className="text-muted-foreground mb-6">Start your learning journey by exploring our courses</p>
+          <Button onClick={() => navigate("/explore-courses")}>Explore Courses</Button>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout>
@@ -40,7 +93,7 @@ const LearningPath = () => {
           <div>
             <h3 className="text-lg font-semibold text-foreground">Overall Progress</h3>
             <p className="text-sm text-muted-foreground">
-              {completedCourses} of {mockLearningPath.length} courses completed
+              {completedCourses} of {enrolledCoursesData.length} courses completed
             </p>
           </div>
           <div className="flex items-center gap-4">
@@ -49,7 +102,7 @@ const LearningPath = () => {
         </div>
         <Progress value={totalProgress} className="h-3" />
         <div className="flex gap-2 mt-4">
-          {mockLearningPath.map((course, idx) => (
+          {enrolledCoursesData.map((course) => (
             <div
               key={course.id}
               className={cn(
@@ -94,7 +147,12 @@ const LearningPath = () => {
   );
 };
 
-function CoursePathCard({ course, index }: { course: LearningCourse; index: number }) {
+interface EnrolledCourse extends Course {
+  progress: number;
+  status: "completed" | "in-progress" | "not-started";
+}
+
+function CoursePathCard({ course, index }: { course: EnrolledCourse; index: number }) {
   const statusColors = {
     completed: "border-primary bg-primary/5",
     "in-progress": "border-primary/50 bg-card",
@@ -114,6 +172,21 @@ function CoursePathCard({ course, index }: { course: LearningCourse; index: numb
         return <Circle className="w-4 h-4 text-muted-foreground" />;
     }
   };
+
+  // Generate lessons from curriculum
+  const modules = course.curriculum.map((item, idx) => ({
+    id: `module-${course.id}-${idx}`,
+    title: item.title,
+    duration: item.duration,
+    completed: course.progress >= ((idx + 1) / course.curriculum.length) * 100,
+    lessons: [
+      { id: `lesson-${idx}-1`, title: `${item.title} - Introduction`, duration: "10 min", type: "video", completed: course.progress >= ((idx + 0.3) / course.curriculum.length) * 100 },
+      { id: `lesson-${idx}-2`, title: `${item.title} - Practice`, duration: "20 min", type: "reading", completed: course.progress >= ((idx + 0.6) / course.curriculum.length) * 100 },
+      { id: `lesson-${idx}-3`, title: `${item.title} - Quiz`, duration: "15 min", type: "quiz", completed: course.progress >= ((idx + 1) / course.curriculum.length) * 100 },
+    ],
+  }));
+
+  const isCurrentPosition = course.status === "in-progress";
 
   return (
     <div className="relative">
@@ -150,18 +223,18 @@ function CoursePathCard({ course, index }: { course: LearningCourse; index: numb
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="text-lg font-semibold text-foreground">{course.title}</h3>
-                {course.isCurrentPosition && (
+                {isCurrentPosition && (
                   <Badge variant="default" className="gap-1">
                     <MapPin className="w-3 h-3" /> You are here
                   </Badge>
                 )}
               </div>
               <div className="flex items-center gap-3 mt-1 text-sm text-muted-foreground">
-                <span>{course.modules.length} modules</span>
+                <span>{course.curriculum.length} modules</span>
                 <span>•</span>
-                <span>
-                  {course.modules.reduce((acc, m) => acc + m.lessons.length, 0)} lessons
-                </span>
+                <span>{course.duration}</span>
+                <span>•</span>
+                <span>{course.instructor}</span>
               </div>
             </div>
           </div>
@@ -191,7 +264,7 @@ function CoursePathCard({ course, index }: { course: LearningCourse; index: numb
 
         {/* Modules Accordion */}
         <Accordion type="multiple" className="space-y-2">
-          {course.modules.map((module) => (
+          {modules.map((module) => (
             <AccordionItem
               key={module.id}
               value={module.id}
@@ -260,7 +333,7 @@ function CoursePathCard({ course, index }: { course: LearningCourse; index: numb
               <div>
                 <p className="text-sm font-medium text-foreground">Next Up</p>
                 <p className="text-sm text-muted-foreground">
-                  {course.modules
+                  {modules
                     .flatMap((m) => m.lessons)
                     .find((l) => !l.completed)?.title || "Complete remaining lessons"}
                 </p>
