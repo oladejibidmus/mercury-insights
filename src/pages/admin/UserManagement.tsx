@@ -93,7 +93,7 @@ const UserManagement = () => {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
         <Card>
           <CardContent className="p-4">
             <p className="text-sm text-muted-foreground">Total Users</p>
@@ -118,6 +118,12 @@ const UserManagement = () => {
             <p className="text-2xl font-bold text-blue-500">{users.filter((u) => u.role === "admin").length}</p>
           </CardContent>
         </Card>
+        <Card>
+          <CardContent className="p-4">
+            <p className="text-sm text-muted-foreground">Learners</p>
+            <p className="text-2xl font-bold text-primary">{users.filter((u) => u.role === "user").length}</p>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Filters Bar */}
@@ -137,7 +143,7 @@ const UserManagement = () => {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Roles</SelectItem>
-            <SelectItem value="user">User</SelectItem>
+            <SelectItem value="user">Learner</SelectItem>
             <SelectItem value="admin">Admin</SelectItem>
           </SelectContent>
         </Select>
@@ -196,7 +202,7 @@ const UserManagement = () => {
                     </TableCell>
                     <TableCell>
                       <Badge variant={user.role === "admin" ? "default" : "outline"}>
-                        {user.role}
+                        {user.role === "admin" ? "Admin" : "Learner"}
                       </Badge>
                     </TableCell>
                     <TableCell>
@@ -263,7 +269,9 @@ const UserManagement = () => {
                   <h3 className="text-lg font-semibold">{selectedUser.name || "No name"}</h3>
                   <p className="text-muted-foreground">{selectedUser.email}</p>
                   <div className="flex gap-2 mt-2">
-                    <Badge variant={selectedUser.role === "admin" ? "default" : "outline"}>{selectedUser.role}</Badge>
+                    <Badge variant={selectedUser.role === "admin" ? "default" : "outline"}>
+                      {selectedUser.role === "admin" ? "Admin" : "Learner"}
+                    </Badge>
                     <Badge variant={selectedUser.status === "active" ? "default" : "destructive"}>{selectedUser.status}</Badge>
                   </div>
                 </div>
