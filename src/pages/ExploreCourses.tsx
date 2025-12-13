@@ -42,7 +42,6 @@ const ExploreCourses = () => {
 
     // Duration filter
     if (selectedDuration !== "All") {
-      const hours = courses.map((c) => parseInt(c.duration));
       if (selectedDuration === "0-20 hours") {
         courses = courses.filter((c) => parseInt(c.duration) <= 20);
       } else if (selectedDuration === "20-40 hours") {
@@ -93,20 +92,19 @@ const ExploreCourses = () => {
   return (
     <DashboardLayout>
       {/* Header */}
-      <div className="mb-8">
+      <div className="mb-6">
         <h1 className="text-3xl font-bold text-foreground mb-2">Explore Courses</h1>
         <p className="text-muted-foreground">Discover {mockCourses.length} courses to expand your skills</p>
       </div>
 
       {/* Search & Sort Bar */}
-      <div className="flex flex-col sm:flex-row gap-4 mb-6">
+      <div className="flex flex-col sm:flex-row gap-4 mb-4">
         <CourseSearch value={searchQuery} onChange={setSearchQuery} />
         <CourseSort value={sortBy} onChange={setSortBy} />
       </div>
 
-      {/* Main Content */}
-      <div className="flex gap-6">
-        {/* Filters Sidebar */}
+      {/* Filters Row */}
+      <div className="mb-6 pb-6 border-b border-border">
         <CourseFilters
           selectedCategory={selectedCategory}
           setSelectedCategory={setSelectedCategory}
@@ -118,36 +116,35 @@ const ExploreCourses = () => {
           setSelectedRating={setSelectedRating}
           onClearFilters={handleClearFilters}
         />
-
-        {/* Course Grid */}
-        <div className="flex-1">
-          <div className="mb-4 text-sm text-muted-foreground">
-            Showing {filteredCourses.length} courses
-          </div>
-          
-          {filteredCourses.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
-              {filteredCourses.map((course) => (
-                <CourseCard
-                  key={course.id}
-                  course={course}
-                  onClick={() => setSelectedCourse(course)}
-                />
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-16">
-              <p className="text-lg text-muted-foreground">No courses found matching your criteria.</p>
-              <button
-                onClick={handleClearFilters}
-                className="mt-4 text-primary hover:underline"
-              >
-                Clear all filters
-              </button>
-            </div>
-          )}
-        </div>
       </div>
+
+      {/* Results Count */}
+      <div className="mb-4 text-sm text-muted-foreground">
+        Showing {filteredCourses.length} courses
+      </div>
+
+      {/* Course Grid */}
+      {filteredCourses.length > 0 ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+          {filteredCourses.map((course) => (
+            <CourseCard
+              key={course.id}
+              course={course}
+              onClick={() => setSelectedCourse(course)}
+            />
+          ))}
+        </div>
+      ) : (
+        <div className="text-center py-16">
+          <p className="text-lg text-muted-foreground">No courses found matching your criteria.</p>
+          <button
+            onClick={handleClearFilters}
+            className="mt-4 text-primary hover:underline"
+          >
+            Clear all filters
+          </button>
+        </div>
+      )}
 
       {/* Course Preview Modal */}
       <CoursePreviewModal
