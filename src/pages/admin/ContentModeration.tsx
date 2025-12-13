@@ -8,36 +8,16 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { AlertTriangle, CheckCircle, XCircle, Flag, MessageSquare, Eye, Search, MoreVertical, Pin, Lock, Trash2, Ban, ThumbsUp, Clock } from "lucide-react";
-import { toast } from "sonner";
-
-interface ForumPost {
-  id: string;
-  title: string;
-  author: string;
-  course: string;
-  content: string;
-  replies: number;
-  status: "open" | "answered" | "flagged" | "closed";
-  lastActivity: string;
-  upvotes: number;
-  isPinned: boolean;
-}
-
-const mockPosts: ForumPost[] = [
-  { id: "1", title: "How to handle null values in Python pandas?", author: "john@example.com", course: "Python for Data Science", content: "I'm having trouble with NaN values in my dataset...", replies: 12, status: "answered", lastActivity: "2 hours ago", upvotes: 24, isPinned: false },
-  { id: "2", title: "SPAM: Check out my website for free courses!", author: "spammer123", course: "SQL Bootcamp", content: "This is spam content promoting external links...", replies: 0, status: "flagged", lastActivity: "1 hour ago", upvotes: 0, isPinned: false },
-  { id: "3", title: "Best practices for SQL query optimization", author: "sarah@example.com", course: "SQL Bootcamp", content: "Looking for tips on optimizing complex queries...", replies: 8, status: "open", lastActivity: "30 min ago", upvotes: 15, isPinned: true },
-  { id: "4", title: "Inappropriate comment in discussion", author: "user456", course: "Tableau Expert", content: "This post contains inappropriate language...", replies: 3, status: "flagged", lastActivity: "4 hours ago", upvotes: 2, isPinned: false },
-  { id: "5", title: "Tableau vs Power BI - which to learn first?", author: "emily@example.com", course: "Tableau Expert", content: "I want to start learning visualization tools...", replies: 25, status: "answered", lastActivity: "1 day ago", upvotes: 42, isPinned: false },
-  { id: "6", title: "Misleading course information reported", author: "alex@example.com", course: "Power BI Complete", content: "The course description says it covers X but...", replies: 5, status: "flagged", lastActivity: "3 hours ago", upvotes: 8, isPinned: false },
-];
+import { AlertTriangle, CheckCircle, XCircle, Flag, MessageSquare, Eye, Search, MoreVertical, Pin, Lock, Trash2, ThumbsUp, Clock, Loader2 } from "lucide-react";
+import { useAdminForumPosts } from "@/hooks/useAdminForumPosts";
+import { format } from "date-fns";
 
 const ContentModeration = () => {
-  const [posts, setPosts] = useState(mockPosts);
   const [activeTab, setActiveTab] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [courseFilter, setCourseFilter] = useState("all");
+
+  const { posts, isLoading, updatePostStatus, togglePinPost, deletePost } = useAdminForumPosts();
 
   const filteredPosts = posts.filter((post) => {
     const matchesTab = activeTab === "all" || 
@@ -45,39 +25,57 @@ const ContentModeration = () => {
       (activeTab === "open" && post.status === "open") ||
       (activeTab === "answered" && post.status === "answered");
     const matchesSearch = post.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      post.author.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCourse = courseFilter === "all" || post.course === courseFilter;
+      (post.author_name?.toLowerCase() || "").includes(searchQuery.toLowerCase());
+    const matchesCourse = courseFilter === "all" || post.course_title === courseFilter;
     return matchesTab && matchesSearch && matchesCourse;
   });
 
-  const handlePinPost = (id: string) => {
-    setPosts((prev) => prev.map((p) => (p.id === id ? { ...p, isPinned: !p.isPinned } : p)));
-    toast.success("Post pin status updated");
+  const handlePinPost = (post: typeof posts[0]) => {
+    togglePinPost.mutate({ id: post.id, isPinned: post.is_pinned || false });
   };
 
   const handleClosePost = (id: string) => {
-    setPosts((prev) => prev.map((p) => (p.id === id ? { ...p, status: "closed" as const } : p)));
-    toast.success("Post closed");
-  };
-
-  const handleDeletePost = (id: string) => {
-    setPosts((prev) => prev.filter((p) => p.id !== id));
-    toast.success("Post deleted");
+    updatePostStatus.mutate({ id, status: "closed" });
   };
 
   const handleApprovePost = (id: string) => {
-    setPosts((prev) => prev.map((p) => (p.id === id ? { ...p, status: "open" as const } : p)));
-    toast.success("Post approved");
+    updatePostStatus.mutate({ id, status: "open" });
   };
 
-  const handleBanUser = (author: string) => {
-    toast.success(`User ${author} has been banned`);
+  const handleDeletePost = (id: string) => {
+    deletePost.mutate(id);
   };
 
   const flaggedCount = posts.filter((p) => p.status === "flagged").length;
   const unansweredCount = posts.filter((p) => p.status === "open").length;
 
-  const uniqueCourses = [...new Set(posts.map((p) => p.course))];
+  const uniqueCourses = [...new Set(posts.map((p) => p.course_title).filter(Boolean))];
+
+  const getLastActivity = (updatedAt: string) => {
+    try {
+      const date = new Date(updatedAt);
+      const now = new Date();
+      const diffMs = now.getTime() - date.getTime();
+      const diffMins = Math.floor(diffMs / 60000);
+      
+      if (diffMins < 1) return "Just now";
+      if (diffMins < 60) return `${diffMins} min ago`;
+      if (diffMins < 1440) return `${Math.floor(diffMins / 60)} hours ago`;
+      return `${Math.floor(diffMins / 1440)} days ago`;
+    } catch {
+      return "Unknown";
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <AdminLayout>
+        <div className="flex items-center justify-center h-64">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        </div>
+      </AdminLayout>
+    );
+  }
 
   return (
     <AdminLayout>
@@ -109,7 +107,7 @@ const ContentModeration = () => {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Avg Response Time</p>
-                <p className="text-2xl font-bold">2.4h</p>
+                <p className="text-2xl font-bold">—</p>
               </div>
             </div>
           </CardContent>
@@ -160,7 +158,7 @@ const ContentModeration = () => {
           <SelectContent>
             <SelectItem value="all">All Courses</SelectItem>
             {uniqueCourses.map((course) => (
-              <SelectItem key={course} value={course}>{course}</SelectItem>
+              <SelectItem key={course} value={course!}>{course}</SelectItem>
             ))}
           </SelectContent>
         </Select>
@@ -209,15 +207,15 @@ const ContentModeration = () => {
                       <TableRow key={post.id} className={post.status === "flagged" ? "bg-destructive/5" : ""}>
                         <TableCell>
                           <div className="flex items-start gap-2">
-                            {post.isPinned && <Pin className="w-4 h-4 text-primary mt-1" />}
+                            {post.is_pinned && <Pin className="w-4 h-4 text-primary mt-1" />}
                             <div>
                               <p className="font-medium line-clamp-1">{post.title}</p>
-                              <p className="text-sm text-muted-foreground">{post.author}</p>
+                              <p className="text-sm text-muted-foreground">{post.author_name}</p>
                             </div>
                           </div>
                         </TableCell>
                         <TableCell>
-                          <Badge variant="outline" className="text-xs">{post.course}</Badge>
+                          <Badge variant="outline" className="text-xs">{post.course_title || "General"}</Badge>
                         </TableCell>
                         <TableCell>
                           <Badge 
@@ -235,14 +233,14 @@ const ContentModeration = () => {
                             {post.status}
                           </Badge>
                         </TableCell>
-                        <TableCell>{post.replies}</TableCell>
+                        <TableCell>{post.replies_count || 0}</TableCell>
                         <TableCell>
                           <div className="flex items-center gap-1">
                             <ThumbsUp className="w-4 h-4 text-muted-foreground" />
-                            {post.upvotes}
+                            {post.upvotes || 0}
                           </div>
                         </TableCell>
-                        <TableCell className="text-muted-foreground text-sm">{post.lastActivity}</TableCell>
+                        <TableCell className="text-muted-foreground text-sm">{getLastActivity(post.updated_at)}</TableCell>
                         <TableCell>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
@@ -255,9 +253,9 @@ const ContentModeration = () => {
                                 <Eye className="w-4 h-4 mr-2" />
                                 View Post
                               </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => handlePinPost(post.id)}>
+                              <DropdownMenuItem onClick={() => handlePinPost(post)}>
                                 <Pin className="w-4 h-4 mr-2" />
-                                {post.isPinned ? "Unpin" : "Pin"} Post
+                                {post.is_pinned ? "Unpin" : "Pin"} Post
                               </DropdownMenuItem>
                               {post.status === "flagged" && (
                                 <DropdownMenuItem onClick={() => handleApprovePost(post.id)}>
@@ -268,10 +266,6 @@ const ContentModeration = () => {
                               <DropdownMenuItem onClick={() => handleClosePost(post.id)}>
                                 <Lock className="w-4 h-4 mr-2" />
                                 Close Post
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => handleBanUser(post.author)}>
-                                <Ban className="w-4 h-4 mr-2" />
-                                Ban User
                               </DropdownMenuItem>
                               <DropdownMenuItem className="text-destructive" onClick={() => handleDeletePost(post.id)}>
                                 <Trash2 className="w-4 h-4 mr-2" />
@@ -289,30 +283,6 @@ const ContentModeration = () => {
           </Card>
         </TabsContent>
       </Tabs>
-
-      {/* Top Contributors */}
-      <Card className="mt-6">
-        <CardContent className="p-6">
-          <h3 className="font-semibold mb-4">Top Forum Contributors</h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {[
-              { name: "Dr. Sarah Chen", posts: 45, helpful: 32 },
-              { name: "Alex Brown", posts: 35, helpful: 28 },
-              { name: "Emily Watson", posts: 20, helpful: 15 },
-            ].map((user, index) => (
-              <div key={user.name} className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
-                <span className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-semibold text-sm">
-                  {index + 1}
-                </span>
-                <div className="flex-1">
-                  <p className="font-medium text-sm">{user.name}</p>
-                  <p className="text-xs text-muted-foreground">{user.posts} posts • {user.helpful} helpful</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
     </AdminLayout>
   );
 };
