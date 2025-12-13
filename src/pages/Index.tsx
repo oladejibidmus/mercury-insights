@@ -7,24 +7,24 @@ import { DateFilter } from "@/components/dashboard/DateFilter";
 import { AddTransactionButton } from "@/components/dashboard/AddTransactionButton";
 import { ThemeToggle } from "@/components/dashboard/ThemeToggle";
 import { useDashboardData } from "@/hooks/useDashboardData";
+import { cn } from "@/lib/utils";
 
 type FilterOption = "7d" | "30d" | "all";
 
 const Index = () => {
   const [dateFilter, setDateFilter] = useState<FilterOption>("30d");
-  const [sidebarExpanded, setSidebarExpanded] = useState(false);
+  const [sidebarExpanded, setSidebarExpanded] = useState(true);
   const { account, transactions, isLoading } = useDashboardData(dateFilter);
 
   return (
     <div className="min-h-screen bg-background">
       <Sidebar 
-        activeItem="home" 
         isExpanded={sidebarExpanded} 
         onToggle={() => setSidebarExpanded(!sidebarExpanded)} 
       />
       
       {/* Main Content */}
-      <main className={`transition-all duration-300 ${sidebarExpanded ? "pl-52" : "pl-16"}`}>
+      <main className={cn("transition-all duration-300", sidebarExpanded ? "ml-56" : "ml-16")}>
         {/* Header */}
         <header className="h-16 border-b border-border flex items-center justify-between px-6 animate-fade-in">
           <div>
