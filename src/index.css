@@ -6,6 +6,8 @@
 
 @import url("https://fonts.googleapis.com/css2?family=Inter&display=swap");
 
+@import url("https://fonts.googleapis.com/css2?family=Open+Sans&display=swap");
+
 @layer base {
   :root {
     /* Mercury-inspired light theme */
@@ -61,6 +63,7 @@
     --chart-3: 0 72% 51%;
     --chart-4: 38 92% 50%;
     --chart-5: 270 70% 60%;
+    --font-sans: "Open Sans", ui-sans-serif, system-ui, sans-serif, Apple Color Emoji, Segoe UI Emoji, Segoe UI Symbol, Noto Color Emoji;
   }
 
   .dark {
@@ -115,6 +118,7 @@
     --chart-3: 0 72% 51%;
     --chart-4: 38 92% 50%;
     --chart-5: 270 70% 60%;
+    --font-sans: "Open Sans", ui-sans-serif, system-ui, sans-serif, Apple Color Emoji, Segoe UI Emoji, Segoe UI Symbol, Noto Color Emoji;
   }
 }
 
