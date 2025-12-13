@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -37,15 +38,34 @@ const AdminSignup = () => {
     }
     
     setIsLoading(true);
-    const { error } = await signUp(email, password);
-    setIsLoading(false);
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        emailRedirectTo: `${window.location.origin}/admin`,
+      }
+    });
     
     if (error) {
+      setIsLoading(false);
       toast.error(error.message);
-    } else {
-      toast.success("Account created! Please contact an administrator to grant admin privileges.");
-      navigate("/admin");
+      return;
     }
+    
+    // Assign admin role to the new user
+    if (data.user) {
+      const { error: roleError } = await supabase
+        .from("user_roles")
+        .upsert({ user_id: data.user.id, role: "admin" }, { onConflict: "user_id,role" });
+      
+      if (roleError) {
+        console.error("Failed to assign admin role:", roleError);
+      }
+    }
+    
+    setIsLoading(false);
+    toast.success("Admin account created successfully!");
+    navigate("/admin");
   };
 
   const handleSignIn = async (e: React.FormEvent) => {
@@ -156,9 +176,6 @@ const AdminSignup = () => {
                   {isLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
                   Create Instructor Account
                 </Button>
-                <p className="text-xs text-center text-muted-foreground mt-4">
-                  Note: Admin privileges must be granted by an existing administrator after account creation.
-                </p>
               </form>
             </TabsContent>
           </Tabs>
