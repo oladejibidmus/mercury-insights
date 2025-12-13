@@ -1,8 +1,9 @@
-import { LayoutDashboard, Compass, Route, ClipboardCheck, FolderKanban, Award, MessageSquare, HelpCircle, ChevronLeft, ChevronRight, Search, Shield, LogOut } from "lucide-react";
+import { LayoutDashboard, Compass, Route, ClipboardCheck, FolderKanban, Award, MessageSquare, HelpCircle, ChevronLeft, ChevronRight, Search, Shield, LogOut, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { useAdminCheck } from "@/hooks/useAdminCheck";
 import { toast } from "sonner";
 
 interface SidebarProps {
@@ -129,6 +130,7 @@ export function Sidebar({
   onToggle
 }: SidebarProps) {
   const { user, signOut } = useAuth();
+  const { isAdmin } = useAdminCheck();
   const navigate = useNavigate();
 
   const handleSignOut = async () => {
@@ -176,9 +178,23 @@ export function Sidebar({
         <SectionHeader label="Forum" isExpanded={isExpanded} />
         {forumItems.map(item => <NavItem key={item.id} {...item} isExpanded={isExpanded} />)}
 
-        {/* Admin Section */}
-        <SectionHeader label="Admin" isExpanded={isExpanded} />
-        <NavItem {...adminItem} isExpanded={isExpanded} />
+        {/* Admin Section - Only visible to admins */}
+        {isAdmin && (
+          <>
+            <SectionHeader label="Admin" isExpanded={isExpanded} />
+            <NavItem {...adminItem} isExpanded={isExpanded} />
+          </>
+        )}
+
+        {/* Profile Section */}
+        <SectionHeader label="Account" isExpanded={isExpanded} />
+        <NavItem 
+          id="profile"
+          icon={User}
+          label="Profile & Settings"
+          path="/profile"
+          isExpanded={isExpanded}
+        />
       </nav>
 
       {/* Sign Out & Toggle */}

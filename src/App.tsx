@@ -17,6 +17,7 @@ import CourseForum from "./pages/CourseForum";
 import QA from "./pages/QA";
 import Auth from "./pages/Auth";
 import AdminSignup from "./pages/AdminSignup";
+import Profile from "./pages/Profile";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import UserManagement from "./pages/admin/UserManagement";
 import CourseManagement from "./pages/admin/CourseManagement";
@@ -46,6 +47,7 @@ const App = () => (
               <Route path="/certificates" element={<Certificates />} />
               <Route path="/course-forum" element={<CourseForum />} />
               <Route path="/qa" element={<QA />} />
+              <Route path="/profile" element={<Profile />} />
               {/* Admin Routes */}
               <Route path="/admin" element={<AdminDashboard />} />
               <Route path="/admin/users" element={<UserManagement />} />
