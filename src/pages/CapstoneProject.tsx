@@ -215,7 +215,7 @@ const CapstoneProject = () => {
                         </Button>
                       )}
 
-                      {(status === "not-started" || status === "in-progress") && (
+                      {status === "not-started" && (
                         <Dialog open={submitDialogOpen === project.id} onOpenChange={(open) => setSubmitDialogOpen(open ? project.id : null)}>
                           <DialogTrigger asChild>
                             <Button>
