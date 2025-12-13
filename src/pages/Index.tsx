@@ -1,12 +1,66 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+import { useState } from "react";
+import { Sidebar } from "@/components/dashboard/Sidebar";
+import { BalanceCard } from "@/components/dashboard/BalanceCard";
+import { TransactionsTable } from "@/components/dashboard/TransactionsTable";
+import { CashFlowChart } from "@/components/dashboard/CashFlowChart";
+import { DateFilter } from "@/components/dashboard/DateFilter";
+import { AddTransactionButton } from "@/components/dashboard/AddTransactionButton";
+import { useDashboardData } from "@/hooks/useDashboardData";
+
+type FilterOption = "7d" | "30d" | "all";
 
 const Index = () => {
+  const [dateFilter, setDateFilter] = useState<FilterOption>("30d");
+  const { account, transactions, isLoading } = useDashboardData(dateFilter);
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background">
-      <div className="text-center">
-        <h1 className="mb-4 text-4xl font-bold">Welcome to Your Blank App</h1>
-        <p className="text-xl text-muted-foreground">Start building your amazing project here!</p>
-      </div>
+    <div className="min-h-screen bg-background">
+      <Sidebar activeItem="home" />
+      
+      {/* Main Content */}
+      <main className="pl-16">
+        {/* Header */}
+        <header className="h-16 border-b border-border flex items-center justify-between px-6 animate-fade-in">
+          <div>
+            <h1 className="text-xl font-semibold tracking-tight">Dashboard</h1>
+          </div>
+          <div className="flex items-center gap-4">
+            <DateFilter value={dateFilter} onChange={setDateFilter} />
+            {account && <AddTransactionButton accountId={account.id} />}
+          </div>
+        </header>
+
+        {/* Dashboard Grid */}
+        <div className="p-6 max-w-7xl mx-auto">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Balance Card */}
+            <div className="lg:col-span-1">
+              <BalanceCard
+                accountName={account?.name || "Loading..."}
+                balance={account?.balance || 0}
+                isLoading={isLoading}
+              />
+            </div>
+
+            {/* Cash Flow Chart */}
+            <div className="lg:col-span-2">
+              <CashFlowChart
+                transactions={transactions}
+                dateFilter={dateFilter}
+                isLoading={isLoading}
+              />
+            </div>
+
+            {/* Transactions Table */}
+            <div className="lg:col-span-3">
+              <TransactionsTable
+                transactions={transactions.slice(0, 10)}
+                isLoading={isLoading}
+              />
+            </div>
+          </div>
+        </div>
+      </main>
     </div>
   );
 };
