@@ -12,14 +12,19 @@ type FilterOption = "7d" | "30d" | "all";
 
 const Index = () => {
   const [dateFilter, setDateFilter] = useState<FilterOption>("30d");
+  const [sidebarExpanded, setSidebarExpanded] = useState(false);
   const { account, transactions, isLoading } = useDashboardData(dateFilter);
 
   return (
     <div className="min-h-screen bg-background">
-      <Sidebar activeItem="home" />
+      <Sidebar 
+        activeItem="home" 
+        isExpanded={sidebarExpanded} 
+        onToggle={() => setSidebarExpanded(!sidebarExpanded)} 
+      />
       
       {/* Main Content */}
-      <main className="pl-16">
+      <main className={`transition-all duration-300 ${sidebarExpanded ? "pl-52" : "pl-16"}`}>
         {/* Header */}
         <header className="h-16 border-b border-border flex items-center justify-between px-6 animate-fade-in">
           <div>
