@@ -6,11 +6,30 @@ import { CourseCard } from "@/components/courses/CourseCard";
 import { CourseSearch } from "@/components/courses/CourseSearch";
 import { CourseSort } from "@/components/courses/CourseSort";
 import { CoursePreviewModal } from "@/components/courses/CoursePreviewModal";
-import { mockCourses, Course } from "@/data/courses";
+import { useCourses, DBCourse } from "@/hooks/useCourses";
 import { useCourseActions } from "@/hooks/useCourseActions";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Loader2 } from "lucide-react";
+
+// Adapter to convert DB course to display format
+const adaptCourse = (course: DBCourse) => ({
+  id: course.id,
+  title: course.title,
+  instructor: course.instructor,
+  thumbnail: course.thumbnail || "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=400&h=225&fit=crop",
+  rating: course.rating || 0,
+  reviewCount: 0,
+  duration: course.duration || "0 hours",
+  level: (course.level as "Beginner" | "Intermediate" | "Advanced") || "Beginner",
+  category: course.category,
+  enrollmentCount: course.enrollment_count || 0,
+  description: course.description || "",
+  curriculum: [],
+  instructorBio: "",
+  reviews: [],
+});
 
 const ExploreCourses = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -19,12 +38,13 @@ const ExploreCourses = () => {
   const [selectedLevel, setSelectedLevel] = useState("All");
   const [selectedDuration, setSelectedDuration] = useState("All");
   const [selectedRating, setSelectedRating] = useState("All");
-  const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
+  const [selectedCourse, setSelectedCourse] = useState<ReturnType<typeof adaptCourse> | null>(null);
   const [activeTab, setActiveTab] = useState("all");
   const [actionLoading, setActionLoading] = useState(false);
   
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { data: dbCourses = [], isLoading } = useCourses();
   const {
     enrolledCourses,
     favoriteCourses,
@@ -37,20 +57,22 @@ const ExploreCourses = () => {
     getProgress,
   } = useCourseActions();
 
+  const courses = useMemo(() => dbCourses.map(adaptCourse), [dbCourses]);
+
   const filteredCourses = useMemo(() => {
-    let courses = [...mockCourses];
+    let filtered = [...courses];
 
     // Tab filter
     if (activeTab === "enrolled") {
-      courses = courses.filter((c) => enrolledCourses.includes(c.id));
+      filtered = filtered.filter((c) => enrolledCourses.includes(c.id));
     } else if (activeTab === "favorites") {
-      courses = courses.filter((c) => favoriteCourses.includes(c.id));
+      filtered = filtered.filter((c) => favoriteCourses.includes(c.id));
     }
 
     // Search filter
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
-      courses = courses.filter(
+      filtered = filtered.filter(
         (c) =>
           c.title.toLowerCase().includes(query) ||
           c.instructor.toLowerCase().includes(query) ||
@@ -60,55 +82,56 @@ const ExploreCourses = () => {
 
     // Category filter
     if (selectedCategory !== "All") {
-      courses = courses.filter((c) => c.category === selectedCategory);
+      filtered = filtered.filter((c) => c.category === selectedCategory);
     }
 
     // Level filter
     if (selectedLevel !== "All") {
-      courses = courses.filter((c) => c.level === selectedLevel);
+      filtered = filtered.filter((c) => c.level === selectedLevel);
     }
 
     // Duration filter
     if (selectedDuration !== "All") {
+      const getDurationHours = (d: string) => parseInt(d) || 0;
       if (selectedDuration === "0-20 hours") {
-        courses = courses.filter((c) => parseInt(c.duration) <= 20);
+        filtered = filtered.filter((c) => getDurationHours(c.duration) <= 20);
       } else if (selectedDuration === "20-40 hours") {
-        courses = courses.filter((c) => {
-          const h = parseInt(c.duration);
+        filtered = filtered.filter((c) => {
+          const h = getDurationHours(c.duration);
           return h > 20 && h <= 40;
         });
       } else if (selectedDuration === "40+ hours") {
-        courses = courses.filter((c) => parseInt(c.duration) > 40);
+        filtered = filtered.filter((c) => getDurationHours(c.duration) > 40);
       }
     }
 
     // Rating filter
     if (selectedRating !== "All") {
       const minRating = parseFloat(selectedRating.replace("+", ""));
-      courses = courses.filter((c) => c.rating >= minRating);
+      filtered = filtered.filter((c) => c.rating >= minRating);
     }
 
     // Sort
     switch (sortBy) {
       case "popular":
-        courses.sort((a, b) => b.enrollmentCount - a.enrollmentCount);
+        filtered.sort((a, b) => b.enrollmentCount - a.enrollmentCount);
         break;
       case "newest":
-        courses.sort((a, b) => b.id.localeCompare(a.id));
+        filtered.sort((a, b) => b.id.localeCompare(a.id));
         break;
       case "rating":
-        courses.sort((a, b) => b.rating - a.rating);
+        filtered.sort((a, b) => b.rating - a.rating);
         break;
       case "duration-asc":
-        courses.sort((a, b) => parseInt(a.duration) - parseInt(b.duration));
+        filtered.sort((a, b) => parseInt(a.duration) - parseInt(b.duration));
         break;
       case "duration-desc":
-        courses.sort((a, b) => parseInt(b.duration) - parseInt(a.duration));
+        filtered.sort((a, b) => parseInt(b.duration) - parseInt(a.duration));
         break;
     }
 
-    return courses;
-  }, [searchQuery, sortBy, selectedCategory, selectedLevel, selectedDuration, selectedRating, activeTab, enrolledCourses, favoriteCourses]);
+    return filtered;
+  }, [courses, searchQuery, sortBy, selectedCategory, selectedLevel, selectedDuration, selectedRating, activeTab, enrolledCourses, favoriteCourses]);
 
   const handleClearFilters = () => {
     setSelectedCategory("All");
@@ -148,12 +171,22 @@ const ExploreCourses = () => {
     await toggleFavorite(courseId);
   };
 
+  if (isLoading) {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center py-20">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        </div>
+      </DashboardLayout>
+    );
+  }
+
   return (
     <DashboardLayout>
       {/* Header */}
       <div className="mb-6">
         <h1 className="text-3xl font-bold text-foreground mb-2">Explore Courses</h1>
-        <p className="text-muted-foreground">Discover {mockCourses.length} courses to expand your skills</p>
+        <p className="text-muted-foreground">Discover {courses.length} courses to expand your skills</p>
       </div>
 
       {/* Tabs for filtering */}
