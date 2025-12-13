@@ -8,8 +8,9 @@ import { Progress } from "@/components/ui/progress";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { CheckCircle, Circle, PlayCircle, FileText, HelpCircle, MapPin, ChevronRight, BookOpen } from "lucide-react";
+import { CheckCircle, Circle, PlayCircle, FileText, HelpCircle, MapPin, ChevronRight, BookOpen, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 type FilterStatus = "all" | "in-progress" | "completed";
 
@@ -17,7 +18,7 @@ const LearningPath = () => {
   const [filter, setFilter] = useState<FilterStatus>("all");
   const { user } = useAuth();
   const navigate = useNavigate();
-  const { enrolledCourses, courseProgress, getProgress, loading } = useCourseActions();
+  const { enrolledCourses, getProgress, loading, updateProgress } = useCourseActions();
 
   // Get enrolled courses with their progress
   const enrolledCoursesData = mockCourses
@@ -140,7 +141,12 @@ const LearningPath = () => {
       {/* Learning Path Visual */}
       <div className="space-y-4">
         {filteredCourses.map((course, courseIdx) => (
-          <CoursePathCard key={course.id} course={course} index={courseIdx} />
+          <CoursePathCard 
+            key={course.id} 
+            course={course} 
+            index={courseIdx}
+            onUpdateProgress={updateProgress}
+          />
         ))}
       </div>
     </DashboardLayout>
@@ -152,14 +158,92 @@ interface EnrolledCourse extends Course {
   status: "completed" | "in-progress" | "not-started";
 }
 
-function CoursePathCard({ course, index }: { course: EnrolledCourse; index: number }) {
+interface CoursePathCardProps {
+  course: EnrolledCourse;
+  index: number;
+  onUpdateProgress: (courseId: string, percentage: number) => Promise<boolean>;
+}
+
+function CoursePathCard({ course, index, onUpdateProgress }: CoursePathCardProps) {
+  const [loadingLesson, setLoadingLesson] = useState<string | null>(null);
+  
   const statusColors = {
     completed: "border-primary bg-primary/5",
     "in-progress": "border-primary/50 bg-card",
     "not-started": "border-border bg-card opacity-75",
   };
 
-  const getLessonIcon = (type: string, completed: boolean) => {
+  // Generate lessons from curriculum with completion state based on progress
+  const totalLessons = course.curriculum.length * 3; // 3 lessons per module
+  const completedLessonCount = Math.floor((course.progress / 100) * totalLessons);
+
+  const modules = course.curriculum.map((item, idx) => {
+    const lessonStartIndex = idx * 3;
+    return {
+      id: `module-${course.id}-${idx}`,
+      title: item.title,
+      duration: item.duration,
+      completed: completedLessonCount >= (idx + 1) * 3,
+      lessons: [
+        { 
+          id: `lesson-${course.id}-${idx}-1`, 
+          title: `${item.title} - Introduction`, 
+          duration: "10 min", 
+          type: "video", 
+          completed: completedLessonCount > lessonStartIndex,
+          lessonIndex: lessonStartIndex
+        },
+        { 
+          id: `lesson-${course.id}-${idx}-2`, 
+          title: `${item.title} - Practice`, 
+          duration: "20 min", 
+          type: "reading", 
+          completed: completedLessonCount > lessonStartIndex + 1,
+          lessonIndex: lessonStartIndex + 1
+        },
+        { 
+          id: `lesson-${course.id}-${idx}-3`, 
+          title: `${item.title} - Quiz`, 
+          duration: "15 min", 
+          type: "quiz", 
+          completed: completedLessonCount > lessonStartIndex + 2,
+          lessonIndex: lessonStartIndex + 2
+        },
+      ],
+    };
+  });
+
+  const handleLessonClick = async (lessonId: string, lessonIndex: number, isCompleted: boolean) => {
+    if (isCompleted) return; // Already completed
+    
+    setLoadingLesson(lessonId);
+    
+    // Calculate new progress based on completing this lesson
+    const newCompletedCount = lessonIndex + 1;
+    const newProgress = Math.round((newCompletedCount / totalLessons) * 100);
+    
+    const success = await onUpdateProgress(course.id, Math.min(newProgress, 100));
+    
+    if (success) {
+      toast.success("Lesson completed!");
+    }
+    
+    setLoadingLesson(null);
+  };
+
+  const handleStartCourse = async () => {
+    if (course.progress === 0) {
+      setLoadingLesson("start");
+      const success = await onUpdateProgress(course.id, 1);
+      if (success) {
+        toast.success("Course started!");
+      }
+      setLoadingLesson(null);
+    }
+  };
+
+  const getLessonIcon = (type: string, completed: boolean, isLoading: boolean) => {
+    if (isLoading) return <Loader2 className="w-4 h-4 animate-spin text-primary" />;
     if (completed) return <CheckCircle className="w-4 h-4 text-primary" />;
     switch (type) {
       case "video":
@@ -173,20 +257,8 @@ function CoursePathCard({ course, index }: { course: EnrolledCourse; index: numb
     }
   };
 
-  // Generate lessons from curriculum
-  const modules = course.curriculum.map((item, idx) => ({
-    id: `module-${course.id}-${idx}`,
-    title: item.title,
-    duration: item.duration,
-    completed: course.progress >= ((idx + 1) / course.curriculum.length) * 100,
-    lessons: [
-      { id: `lesson-${idx}-1`, title: `${item.title} - Introduction`, duration: "10 min", type: "video", completed: course.progress >= ((idx + 0.3) / course.curriculum.length) * 100 },
-      { id: `lesson-${idx}-2`, title: `${item.title} - Practice`, duration: "20 min", type: "reading", completed: course.progress >= ((idx + 0.6) / course.curriculum.length) * 100 },
-      { id: `lesson-${idx}-3`, title: `${item.title} - Quiz`, duration: "15 min", type: "quiz", completed: course.progress >= ((idx + 1) / course.curriculum.length) * 100 },
-    ],
-  }));
-
   const isCurrentPosition = course.status === "in-progress";
+  const nextLesson = modules.flatMap((m) => m.lessons).find((l) => !l.completed);
 
   return (
     <div className="relative">
@@ -287,39 +359,49 @@ function CoursePathCard({ course, index }: { course: EnrolledCourse; index: numb
               </AccordionTrigger>
               <AccordionContent>
                 <ul className="space-y-2 pt-2 pb-1">
-                  {module.lessons.map((lesson) => (
-                    <li
-                      key={lesson.id}
-                      className={cn(
-                        "flex items-center justify-between p-2 rounded-lg transition-colors",
-                        lesson.completed
-                          ? "bg-primary/5"
-                          : "hover:bg-muted/50 cursor-pointer"
-                      )}
-                    >
-                      <div className="flex items-center gap-3">
-                        {getLessonIcon(lesson.type, lesson.completed)}
-                        <span
-                          className={cn(
-                            "text-sm",
-                            lesson.completed
-                              ? "text-muted-foreground line-through"
-                              : "text-foreground"
-                          )}
-                        >
-                          {lesson.title}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs text-muted-foreground">
-                          {lesson.duration}
-                        </span>
-                        {!lesson.completed && (
-                          <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                  {module.lessons.map((lesson) => {
+                    const isLoading = loadingLesson === lesson.id;
+                    const canComplete = !lesson.completed && (lesson.lessonIndex === 0 || completedLessonCount >= lesson.lessonIndex);
+                    
+                    return (
+                      <li
+                        key={lesson.id}
+                        onClick={() => canComplete && handleLessonClick(lesson.id, lesson.lessonIndex, lesson.completed)}
+                        className={cn(
+                          "flex items-center justify-between p-2 rounded-lg transition-colors",
+                          lesson.completed
+                            ? "bg-primary/5"
+                            : canComplete
+                            ? "hover:bg-muted/50 cursor-pointer"
+                            : "opacity-50 cursor-not-allowed"
                         )}
-                      </div>
-                    </li>
-                  ))}
+                      >
+                        <div className="flex items-center gap-3">
+                          {getLessonIcon(lesson.type, lesson.completed, isLoading)}
+                          <span
+                            className={cn(
+                              "text-sm",
+                              lesson.completed
+                                ? "text-muted-foreground line-through"
+                                : "text-foreground"
+                            )}
+                          >
+                            {lesson.title}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-muted-foreground">
+                            {lesson.duration}
+                          </span>
+                          {!lesson.completed && canComplete && (
+                            <Button size="sm" variant="ghost" className="h-6 px-2 text-xs">
+                              Mark Complete
+                            </Button>
+                          )}
+                        </div>
+                      </li>
+                    );
+                  })}
                 </ul>
               </AccordionContent>
             </AccordionItem>
@@ -327,19 +409,49 @@ function CoursePathCard({ course, index }: { course: EnrolledCourse; index: numb
         </Accordion>
 
         {/* Next Step CTA */}
-        {course.status === "in-progress" && (
+        {course.status === "not-started" && (
+          <div className="mt-4 p-3 bg-muted/50 rounded-lg border border-border">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-foreground">Ready to begin?</p>
+                <p className="text-sm text-muted-foreground">Start your learning journey</p>
+              </div>
+              <Button size="sm" onClick={handleStartCourse} disabled={loadingLesson === "start"}>
+                {loadingLesson === "start" ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : null}
+                Start Course <ChevronRight className="w-4 h-4 ml-1" />
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {course.status === "in-progress" && nextLesson && (
           <div className="mt-4 p-3 bg-primary/10 rounded-lg border border-primary/20">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-foreground">Next Up</p>
-                <p className="text-sm text-muted-foreground">
-                  {modules
-                    .flatMap((m) => m.lessons)
-                    .find((l) => !l.completed)?.title || "Complete remaining lessons"}
-                </p>
+                <p className="text-sm text-muted-foreground">{nextLesson.title}</p>
               </div>
-              <Button size="sm">
+              <Button 
+                size="sm" 
+                onClick={() => handleLessonClick(nextLesson.id, nextLesson.lessonIndex, false)}
+                disabled={loadingLesson === nextLesson.id}
+              >
+                {loadingLesson === nextLesson.id ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : null}
                 Continue <ChevronRight className="w-4 h-4 ml-1" />
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {course.status === "completed" && (
+          <div className="mt-4 p-3 bg-primary/10 rounded-lg border border-primary/20">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <CheckCircle className="w-5 h-5 text-primary" />
+                <p className="text-sm font-medium text-foreground">Course Completed!</p>
+              </div>
+              <Button size="sm" variant="outline">
+                View Certificate
               </Button>
             </div>
           </div>
