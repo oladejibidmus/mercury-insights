@@ -15,6 +15,11 @@ import Certificates from "./pages/Certificates";
 import CourseForum from "./pages/CourseForum";
 import QA from "./pages/QA";
 import Auth from "./pages/Auth";
+import AdminDashboard from "./pages/admin/AdminDashboard";
+import UserManagement from "./pages/admin/UserManagement";
+import CourseManagement from "./pages/admin/CourseManagement";
+import ContentModeration from "./pages/admin/ContentModeration";
+import Analytics from "./pages/admin/Analytics";
 
 const queryClient = new QueryClient();
 
@@ -36,6 +41,12 @@ const App = () => (
               <Route path="/certificates" element={<Certificates />} />
               <Route path="/course-forum" element={<CourseForum />} />
               <Route path="/qa" element={<QA />} />
+              {/* Admin Routes */}
+              <Route path="/admin" element={<AdminDashboard />} />
+              <Route path="/admin/users" element={<UserManagement />} />
+              <Route path="/admin/courses" element={<CourseManagement />} />
+              <Route path="/admin/moderation" element={<ContentModeration />} />
+              <Route path="/admin/analytics" element={<Analytics />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>

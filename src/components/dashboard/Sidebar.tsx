@@ -1,4 +1,4 @@
-import { LayoutDashboard, Compass, Route, ClipboardCheck, FolderKanban, Award, MessageSquare, HelpCircle, ChevronLeft, ChevronRight, Search } from "lucide-react";
+import { LayoutDashboard, Compass, Route, ClipboardCheck, FolderKanban, Award, MessageSquare, HelpCircle, ChevronLeft, ChevronRight, Search, Shield } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Link, useLocation } from "react-router-dom";
@@ -56,6 +56,13 @@ const forumItems = [{
   label: "Q&A",
   path: "/qa"
 }];
+
+const adminItem = {
+  id: "admin",
+  icon: Shield,
+  label: "Admin Portal",
+  path: "/admin"
+};
 
 interface NavItemProps {
   id: string;
@@ -158,6 +165,10 @@ export function Sidebar({
         {/* Forum Section */}
         <SectionHeader label="Forum" isExpanded={isExpanded} />
         {forumItems.map(item => <NavItem key={item.id} {...item} isExpanded={isExpanded} />)}
+
+        {/* Admin Section */}
+        <SectionHeader label="Admin" isExpanded={isExpanded} />
+        <NavItem {...adminItem} isExpanded={isExpanded} />
       </nav>
 
       {/* Toggle Button */}
