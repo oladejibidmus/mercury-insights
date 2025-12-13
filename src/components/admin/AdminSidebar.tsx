@@ -30,14 +30,20 @@ const navItems = [
   {
     id: "moderation",
     icon: MessageSquare,
-    label: "Content Moderation",
+    label: "Forum Moderation",
     path: "/admin/moderation"
   },
   {
     id: "analytics",
     icon: BarChart3,
-    label: "Analytics",
+    label: "Analytics & Reports",
     path: "/admin/analytics"
+  },
+  {
+    id: "settings",
+    icon: Shield,
+    label: "Settings",
+    path: "/admin/settings"
   },
 ];
 
