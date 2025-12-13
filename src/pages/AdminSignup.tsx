@@ -15,7 +15,7 @@ const AdminSignup = () => {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const { user, signUp, signIn } = useAuth();
+  const { user } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -72,15 +72,35 @@ const AdminSignup = () => {
     e.preventDefault();
     
     setIsLoading(true);
-    const { error } = await signIn(email, password);
-    setIsLoading(false);
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     
     if (error) {
+      setIsLoading(false);
       toast.error(error.message);
-    } else {
-      toast.success("Signed in successfully!");
-      navigate("/admin");
+      return;
     }
+    
+    // Check if the user has admin role
+    if (data?.user) {
+      const { data: roleData } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", data.user.id)
+        .eq("role", "admin")
+        .maybeSingle();
+      
+      if (!roleData) {
+        // Not an admin, sign them out
+        await supabase.auth.signOut();
+        setIsLoading(false);
+        toast.error("Access denied. This portal is for instructors only.");
+        return;
+      }
+    }
+    
+    setIsLoading(false);
+    toast.success("Signed in successfully!");
+    navigate("/admin");
   };
 
   return (
