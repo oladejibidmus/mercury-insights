@@ -3,7 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Users, BookOpen, UserPlus, GraduationCap, TrendingUp, Activity } from "lucide-react";
 import { Link } from "react-router-dom";
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell, LineChart, Line } from "recharts";
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, LineChart, Line } from "recharts";
+import { ThemeToggle } from "@/components/dashboard/ThemeToggle";
 
 const stats = [
   { label: "Total Courses", value: "156", icon: BookOpen, color: "text-blue-500", bgColor: "bg-blue-500/10" },
@@ -62,45 +63,48 @@ const COLORS = ["hsl(var(--primary))", "#10b981", "#f59e0b", "#ef4444"];
 const AdminDashboard = () => {
   return (
     <AdminLayout>
-      <div className="flex items-center justify-between mb-6">
+      {/* Header */}
+      <header className="h-16 -mt-8 -mx-8 px-8 mb-6 border-b border-border flex items-center justify-between bg-background animate-fade-in">
         <div>
-          <h1 className="text-3xl font-bold text-foreground mb-2">Admin Dashboard</h1>
-          <p className="text-muted-foreground">Overview of your learning platform</p>
+          <h1 className="text-xl font-semibold tracking-tight">Admin Dashboard</h1>
         </div>
-        <div className="flex gap-3">
-          <Button asChild>
+        <div className="flex items-center gap-3">
+          <Button asChild size="sm">
             <Link to="/admin/courses">
               <BookOpen className="w-4 h-4 mr-2" />
               Create Course
             </Link>
           </Button>
-          <Button variant="outline" asChild>
+          <Button variant="outline" size="sm" asChild>
             <Link to="/admin/users">
               <Users className="w-4 h-4 mr-2" />
               Manage Users
             </Link>
           </Button>
+          <ThemeToggle />
         </div>
-      </div>
+      </header>
 
-      {/* Overview Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        {stats.map((stat) => (
-          <Card key={stat.label}>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground mb-1">{stat.label}</p>
-                  <p className="text-2xl font-bold text-foreground">{stat.value}</p>
+      {/* Dashboard Content */}
+      <div className="max-w-7xl mx-auto">
+        {/* Overview Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+          {stats.map((stat) => (
+            <Card key={stat.label}>
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-muted-foreground mb-1">{stat.label}</p>
+                    <p className="text-2xl font-bold text-foreground">{stat.value}</p>
+                  </div>
+                  <div className={`p-3 rounded-xl ${stat.bgColor} ${stat.color}`}>
+                    <stat.icon className="w-6 h-6" />
+                  </div>
                 </div>
-                <div className={`p-3 rounded-xl ${stat.bgColor} ${stat.color}`}>
-                  <stat.icon className="w-6 h-6" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
 
       {/* Charts Row 1 */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
@@ -259,6 +263,7 @@ const AdminDashboard = () => {
           </div>
         </CardContent>
       </Card>
+      </div>
     </AdminLayout>
   );
 };
