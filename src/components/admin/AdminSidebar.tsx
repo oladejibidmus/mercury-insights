@@ -1,4 +1,4 @@
-import { LayoutDashboard, Users, BookOpen, MessageSquare, BarChart3, ChevronLeft, ChevronRight, Search, Shield } from "lucide-react";
+import { LayoutDashboard, Users, BookOpen, MessageSquare, BarChart3, ChevronLeft, ChevronRight, Search, Shield, Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Link, useLocation } from "react-router-dom";
@@ -8,13 +8,16 @@ interface AdminSidebarProps {
   onToggle: () => void;
 }
 
-const navItems = [
+const overviewItems = [
   {
     id: "dashboard",
     icon: LayoutDashboard,
     label: "Dashboard",
     path: "/admin"
   },
+];
+
+const managementItems = [
   {
     id: "users",
     icon: Users,
@@ -27,21 +30,30 @@ const navItems = [
     label: "Course Management",
     path: "/admin/courses"
   },
+];
+
+const moderationItems = [
   {
     id: "moderation",
     icon: MessageSquare,
     label: "Forum Moderation",
     path: "/admin/moderation"
   },
+];
+
+const analyticsItems = [
   {
     id: "analytics",
     icon: BarChart3,
     label: "Analytics & Reports",
     path: "/admin/analytics"
   },
+];
+
+const settingsItems = [
   {
     id: "settings",
-    icon: Shield,
+    icon: Settings,
     label: "Settings",
     path: "/admin/settings"
   },
@@ -51,11 +63,12 @@ interface NavItemProps {
   id: string;
   icon: React.ElementType;
   label: string;
+  badge?: string;
   path: string;
   isExpanded: boolean;
 }
 
-function NavItem({ icon: Icon, label, path, isExpanded }: NavItemProps) {
+function NavItem({ icon: Icon, label, badge, path, isExpanded }: NavItemProps) {
   const location = useLocation();
   const isActive = location.pathname === path;
 
@@ -63,7 +76,7 @@ function NavItem({ icon: Icon, label, path, isExpanded }: NavItemProps) {
     <Link
       to={path}
       className={cn(
-        "flex items-center gap-3 h-10 rounded-lg transition-all duration-200 px-3 w-full",
+        "ripple flex items-center gap-3 h-10 rounded-lg transition-all duration-200 px-3 w-full",
         isActive
           ? "bg-primary/10 text-primary"
           : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
@@ -72,9 +85,25 @@ function NavItem({ icon: Icon, label, path, isExpanded }: NavItemProps) {
     >
       <Icon className="w-5 h-5 flex-shrink-0" />
       {isExpanded && (
-        <span className="text-sm truncate flex-1 text-left font-normal">{label}</span>
+        <>
+          <span className="text-sm truncate flex-1 text-left font-sans font-normal">{label}</span>
+          {badge && (
+            <span className="bg-muted text-muted-foreground text-xs px-2 py-0.5 rounded-full">
+              {badge}
+            </span>
+          )}
+        </>
       )}
     </Link>
+  );
+}
+
+function SectionHeader({ label, isExpanded }: { label: string; isExpanded: boolean }) {
+  if (!isExpanded) return null;
+  return (
+    <div className="mt-4 mb-2 px-3">
+      <span className="text-xs font-medium text-muted-foreground">{label}</span>
+    </div>
   );
 }
 
@@ -111,7 +140,32 @@ export function AdminSidebar({ isExpanded, onToggle }: AdminSidebarProps) {
 
       {/* Navigation */}
       <nav className="flex-1 flex flex-col py-4 px-2 gap-1 overflow-y-auto">
-        {navItems.map((item) => (
+        {/* Overview */}
+        {overviewItems.map((item) => (
+          <NavItem key={item.id} {...item} isExpanded={isExpanded} />
+        ))}
+
+        {/* Management Section */}
+        <SectionHeader label="Management" isExpanded={isExpanded} />
+        {managementItems.map((item) => (
+          <NavItem key={item.id} {...item} isExpanded={isExpanded} />
+        ))}
+
+        {/* Moderation Section */}
+        <SectionHeader label="Moderation" isExpanded={isExpanded} />
+        {moderationItems.map((item) => (
+          <NavItem key={item.id} {...item} isExpanded={isExpanded} />
+        ))}
+
+        {/* Analytics Section */}
+        <SectionHeader label="Insights" isExpanded={isExpanded} />
+        {analyticsItems.map((item) => (
+          <NavItem key={item.id} {...item} isExpanded={isExpanded} />
+        ))}
+
+        {/* Settings Section */}
+        <SectionHeader label="System" isExpanded={isExpanded} />
+        {settingsItems.map((item) => (
           <NavItem key={item.id} {...item} isExpanded={isExpanded} />
         ))}
       </nav>
@@ -120,7 +174,7 @@ export function AdminSidebar({ isExpanded, onToggle }: AdminSidebarProps) {
       <div className="px-2 pb-2">
         <Link
           to="/"
-          className="flex items-center gap-3 h-10 rounded-lg px-3 w-full text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-all duration-200 text-sm"
+          className="ripple flex items-center gap-3 h-10 rounded-lg px-3 w-full text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-all duration-200 text-sm"
         >
           <ChevronLeft className="w-4 h-4" />
           {isExpanded && <span>Back to Student Portal</span>}
@@ -131,7 +185,7 @@ export function AdminSidebar({ isExpanded, onToggle }: AdminSidebarProps) {
       <div className="py-4 px-2 border-t border-sidebar-border">
         <button
           onClick={onToggle}
-          className="flex items-center gap-3 h-10 rounded-lg px-3 w-full text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-all duration-200"
+          className="ripple flex items-center gap-3 h-10 rounded-lg px-3 w-full text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-all duration-200"
           title={isExpanded ? "Collapse sidebar" : "Expand sidebar"}
         >
           {isExpanded ? (
