@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
-import { mockCourses, Course } from "@/data/courses";
+import { useCourses, DBCourse } from "@/hooks/useCourses";
 import { useCourseActions } from "@/hooks/useCourseActions";
 import { useAuth } from "@/contexts/AuthContext";
 import { Progress } from "@/components/ui/progress";
@@ -41,30 +41,62 @@ interface PlayerState {
   progress: number;
 }
 
+// Adapted course type for learning path
+interface Course {
+  id: string;
+  title: string;
+  instructor: string;
+  duration: string;
+  curriculum: { title: string; duration: string }[];
+}
+
 const LearningPath = () => {
   const [filter, setFilter] = useState<FilterStatus>("all");
   const [playerState, setPlayerState] = useState<PlayerState | null>(null);
   const { user } = useAuth();
   const navigate = useNavigate();
-  const { enrolledCourses, getProgress, loading, updateProgress } = useCourseActions();
+  const { data: dbCourses = [], isLoading: coursesLoading } = useCourses();
+  const { enrolledCourses, getProgress, loading: actionsLoading, updateProgress } = useCourseActions();
 
-  // Get enrolled courses with their progress
-  const enrolledCoursesData = mockCourses
-    .filter((course) => enrolledCourses.includes(course.id))
-    .map((course) => {
-      const progress = getProgress(course.id);
-      let status: "completed" | "in-progress" | "not-started" = "not-started";
-      if (progress >= 100) status = "completed";
-      else if (progress > 0) status = "in-progress";
-      return { ...course, progress, status };
+  const loading = coursesLoading || actionsLoading;
+
+  // Get enrolled courses with their progress from database
+  const enrolledCoursesData = useMemo(() => {
+    return dbCourses
+      .filter((course) => enrolledCourses.includes(course.id))
+      .map((course) => {
+        const progress = getProgress(course.id);
+        let status: "completed" | "in-progress" | "not-started" = "not-started";
+        if (progress >= 100) status = "completed";
+        else if (progress > 0) status = "in-progress";
+        
+        // Create a simple curriculum structure for display
+        const curriculum = [
+          { title: "Introduction", duration: "15 min" },
+          { title: "Core Concepts", duration: "30 min" },
+          { title: "Practice & Exercises", duration: "45 min" },
+        ];
+        
+        return {
+          id: course.id,
+          title: course.title,
+          instructor: course.instructor,
+          duration: course.duration || "1 hour",
+          curriculum,
+          progress,
+          status,
+        };
+      });
+  }, [dbCourses, enrolledCourses, getProgress]);
+
+  const filteredCourses = useMemo(() => {
+    return enrolledCoursesData.filter((course) => {
+      if (filter === "all") return true;
+      if (filter === "in-progress") return course.status === "in-progress";
+      if (filter === "completed") return course.status === "completed";
+      return true;
     });
-
-  const filteredCourses = enrolledCoursesData.filter((course) => {
-    if (filter === "all") return true;
-    if (filter === "in-progress") return course.status === "in-progress";
-    if (filter === "completed") return course.status === "completed";
-    return true;
-  });
+  }, [enrolledCoursesData, filter]);
 
   const totalProgress = enrolledCoursesData.length > 0
     ? Math.round(enrolledCoursesData.reduce((acc, c) => acc + c.progress, 0) / enrolledCoursesData.length)
@@ -72,7 +104,7 @@ const LearningPath = () => {
 
   const completedCourses = enrolledCoursesData.filter((c) => c.status === "completed").length;
 
-  const generateModules = (course: Course, progress: number): Module[] => {
+  const generateModules = (course: { id: string; curriculum: { title: string; duration: string }[] }, progress: number): Module[] => {
     const totalLessons = course.curriculum.length * 3;
     const completedLessonCount = Math.floor((progress / 100) * totalLessons);
 
@@ -294,7 +326,12 @@ const LearningPath = () => {
   );
 };
 
-interface EnrolledCourse extends Course {
+interface EnrolledCourse {
+  id: string;
+  title: string;
+  instructor: string;
+  duration: string;
+  curriculum: { title: string; duration: string }[];
   progress: number;
   status: "completed" | "in-progress" | "not-started";
 }
