@@ -1,22 +1,18 @@
 import { 
   LayoutDashboard, 
   Compass, 
-  BookOpen, 
   Route, 
   ClipboardCheck, 
-  TrendingUp, 
   FolderKanban, 
   Award, 
   MessageSquare, 
   HelpCircle, 
   ChevronLeft, 
   ChevronRight,
-  ChevronDown,
   Search
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
-import { useState } from "react";
 
 interface SidebarProps {
   activeItem?: string;
@@ -24,19 +20,17 @@ interface SidebarProps {
   onToggle: () => void;
 }
 
-const navItems = [
+const topItems = [
   { id: "dashboard", icon: LayoutDashboard, label: "Dashboard" },
   { id: "explore", icon: Compass, label: "Explore Courses", badge: "12" },
-  { 
-    id: "my-learning", 
-    icon: BookOpen, 
-    label: "My Learning",
-    subItems: [
-      { id: "learning-path", icon: Route, label: "Learning Path" },
-      { id: "quiz", icon: ClipboardCheck, label: "Quiz and Assessment" },
-    ]
-  },
-  { id: "progress", icon: TrendingUp, label: "Progress" },
+];
+
+const myLearningItems = [
+  { id: "learning-path", icon: Route, label: "Learning Path" },
+  { id: "quiz", icon: ClipboardCheck, label: "Quiz and Assessment" },
+];
+
+const progressItems = [
   { id: "capstone", icon: FolderKanban, label: "Capstone Project" },
   { id: "certificates", icon: Award, label: "Certificates" },
 ];
@@ -46,15 +40,51 @@ const forumItems = [
   { id: "qa", icon: HelpCircle, label: "Q&A" },
 ];
 
+interface NavItemProps {
+  id: string;
+  icon: React.ElementType;
+  label: string;
+  badge?: string;
+  isActive: boolean;
+  isExpanded: boolean;
+}
+
+function NavItem({ id, icon: Icon, label, badge, isActive, isExpanded }: NavItemProps) {
+  return (
+    <button
+      className={cn(
+        "ripple flex items-center gap-3 h-10 rounded-lg transition-all duration-200 px-3 w-full",
+        isActive
+          ? "bg-primary/10 text-primary"
+          : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+      )}
+      title={!isExpanded ? label : undefined}
+    >
+      <Icon className="w-5 h-5 flex-shrink-0" />
+      {isExpanded && (
+        <>
+          <span className="text-sm font-medium truncate flex-1 text-left">{label}</span>
+          {badge && (
+            <span className="bg-muted text-muted-foreground text-xs px-2 py-0.5 rounded-full">
+              {badge}
+            </span>
+          )}
+        </>
+      )}
+    </button>
+  );
+}
+
+function SectionHeader({ label, isExpanded }: { label: string; isExpanded: boolean }) {
+  if (!isExpanded) return null;
+  return (
+    <div className="mt-4 mb-2 px-3">
+      <span className="text-xs font-medium text-muted-foreground">{label}</span>
+    </div>
+  );
+}
+
 export function Sidebar({ activeItem = "dashboard", isExpanded, onToggle }: SidebarProps) {
-  const [expandedMenus, setExpandedMenus] = useState<string[]>(["my-learning"]);
-
-  const toggleMenu = (id: string) => {
-    setExpandedMenus(prev => 
-      prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
-    );
-  };
-
   return (
     <aside 
       className={cn(
@@ -87,97 +117,48 @@ export function Sidebar({ activeItem = "dashboard", isExpanded, onToggle }: Side
 
       {/* Main Navigation */}
       <nav className="flex-1 flex flex-col py-4 px-2 gap-1 overflow-y-auto">
-        {navItems.map((item) => {
-          const Icon = item.icon;
-          const isActive = activeItem === item.id;
-          const hasSubItems = 'subItems' in item && item.subItems;
-          const isMenuExpanded = expandedMenus.includes(item.id);
+        {/* Top Items */}
+        {topItems.map((item) => (
+          <NavItem
+            key={item.id}
+            {...item}
+            isActive={activeItem === item.id}
+            isExpanded={isExpanded}
+          />
+        ))}
 
-          return (
-            <div key={item.id}>
-              <button
-                onClick={() => hasSubItems && isExpanded && toggleMenu(item.id)}
-                className={cn(
-                  "ripple flex items-center gap-3 h-10 rounded-lg transition-all duration-200 px-3 w-full",
-                  isActive
-                    ? "bg-primary/10 text-primary"
-                    : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-                )}
-                title={!isExpanded ? item.label : undefined}
-              >
-                <Icon className="w-5 h-5 flex-shrink-0" />
-                {isExpanded && (
-                  <>
-                    <span className="text-sm font-medium truncate flex-1 text-left">{item.label}</span>
-                    {'badge' in item && item.badge && (
-                      <span className="bg-primary text-primary-foreground text-xs px-2 py-0.5 rounded-full">
-                        {item.badge}
-                      </span>
-                    )}
-                    {hasSubItems && (
-                      <ChevronDown className={cn(
-                        "w-4 h-4 transition-transform duration-200",
-                        isMenuExpanded && "rotate-180"
-                      )} />
-                    )}
-                  </>
-                )}
-              </button>
-              
-              {/* Sub Items */}
-              {hasSubItems && isExpanded && isMenuExpanded && (
-                <div className="ml-4 mt-1 space-y-1">
-                  {item.subItems.map((subItem) => {
-                    const SubIcon = subItem.icon;
-                    const isSubActive = activeItem === subItem.id;
-                    return (
-                      <button
-                        key={subItem.id}
-                        className={cn(
-                          "ripple flex items-center gap-3 h-9 rounded-lg transition-all duration-200 px-3 w-full",
-                          isSubActive
-                            ? "bg-primary/10 text-primary"
-                            : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-                        )}
-                      >
-                        <SubIcon className="w-4 h-4 flex-shrink-0" />
-                        <span className="text-sm font-medium truncate">{subItem.label}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          );
-        })}
+        {/* My Learning Section */}
+        <SectionHeader label="My Learning" isExpanded={isExpanded} />
+        {myLearningItems.map((item) => (
+          <NavItem
+            key={item.id}
+            {...item}
+            isActive={activeItem === item.id}
+            isExpanded={isExpanded}
+          />
+        ))}
+
+        {/* Progress Section */}
+        <SectionHeader label="Progress" isExpanded={isExpanded} />
+        {progressItems.map((item) => (
+          <NavItem
+            key={item.id}
+            {...item}
+            isActive={activeItem === item.id}
+            isExpanded={isExpanded}
+          />
+        ))}
 
         {/* Forum Section */}
-        {isExpanded && (
-          <div className="mt-4 mb-2 px-3">
-            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Forum</span>
-          </div>
-        )}
-        {forumItems.map((item) => {
-          const Icon = item.icon;
-          const isActive = activeItem === item.id;
-          return (
-            <button
-              key={item.id}
-              className={cn(
-                "ripple flex items-center gap-3 h-10 rounded-lg transition-all duration-200 px-3",
-                isActive
-                  ? "bg-primary/10 text-primary"
-                  : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-              )}
-              title={!isExpanded ? item.label : undefined}
-            >
-              <Icon className="w-5 h-5 flex-shrink-0" />
-              {isExpanded && (
-                <span className="text-sm font-medium truncate">{item.label}</span>
-              )}
-            </button>
-          );
-        })}
+        <SectionHeader label="Forum" isExpanded={isExpanded} />
+        {forumItems.map((item) => (
+          <NavItem
+            key={item.id}
+            {...item}
+            isActive={activeItem === item.id}
+            isExpanded={isExpanded}
+          />
+        ))}
       </nav>
 
       {/* Toggle Button */}
