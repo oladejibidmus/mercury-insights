@@ -52,14 +52,14 @@ const AdminSignup = () => {
       return;
     }
     
-    // Assign admin role to the new user
+    // Assign admin role to the new user using security definer function
     if (data.user) {
       const { error: roleError } = await supabase
-        .from("user_roles")
-        .upsert({ user_id: data.user.id, role: "admin" }, { onConflict: "user_id,role" });
+        .rpc('assign_admin_role', { target_user_id: data.user.id });
       
       if (roleError) {
         console.error("Failed to assign admin role:", roleError);
+        toast.error("Account created but failed to assign admin role. Please contact support.");
       }
     }
     
