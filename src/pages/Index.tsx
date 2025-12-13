@@ -5,6 +5,7 @@ import { TransactionsTable } from "@/components/dashboard/TransactionsTable";
 import { CashFlowChart } from "@/components/dashboard/CashFlowChart";
 import { DateFilter } from "@/components/dashboard/DateFilter";
 import { AddTransactionButton } from "@/components/dashboard/AddTransactionButton";
+import { ThemeToggle } from "@/components/dashboard/ThemeToggle";
 import { useDashboardData } from "@/hooks/useDashboardData";
 
 type FilterOption = "7d" | "30d" | "all";
@@ -27,6 +28,7 @@ const Index = () => {
           <div className="flex items-center gap-4">
             <DateFilter value={dateFilter} onChange={setDateFilter} />
             {account && <AddTransactionButton accountId={account.id} />}
+            <ThemeToggle />
           </div>
         </header>
 
