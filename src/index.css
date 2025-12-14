@@ -21,7 +21,7 @@
 @layer base {
   :root {
     /* Mercury-inspired light theme */
-    --background: 0 0% 100%;
+    --background: 48 100% 99%;
     --foreground: 265 4% 12.9%;
 
     --card: 0 0% 100%;
@@ -31,16 +31,16 @@
     --popover-foreground: 265 4% 12.9%;
 
     --primary: 13 82% 40%;
-    --primary-foreground: 248 0.3% 98.4%;
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 248 0.7% 96.8%;
-    --secondary-foreground: 266 4% 20.8%;
+    --secondary: 220 14% 96%;
+    --secondary-foreground: 215 14% 34%;
 
     --muted: 248 0.7% 96.8%;
     --muted-foreground: 257 4.6% 55.4%;
 
-    --accent: 248 0.7% 96.8%;
-    --accent-foreground: 266 4% 20.8%;
+    --accent: 208 46% 89%;
+    --accent-foreground: 224 64% 33%;
 
     --destructive: 27 24.5% 57.7%;
     --destructive-foreground: 0 0% 100%;
