@@ -11,7 +11,9 @@ import { Switch } from "@/components/ui/switch";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { User, BookOpen, Clock, Award, Bell, Lock } from "lucide-react";
+import { User, BookOpen, Clock, Award, Bell, Lock, Trophy } from "lucide-react";
+import { AchievementsDisplay } from "@/components/achievements/AchievementsDisplay";
+import { useCheckAndAwardAchievements } from "@/hooks/useAchievements";
 
 interface ProfileData {
   name: string;
@@ -190,6 +192,10 @@ export default function Profile() {
               <User className="w-4 h-4" />
               Profile
             </TabsTrigger>
+            <TabsTrigger value="achievements" className="flex items-center gap-2">
+              <Trophy className="w-4 h-4" />
+              Achievements
+            </TabsTrigger>
             <TabsTrigger value="stats" className="flex items-center gap-2">
               <BookOpen className="w-4 h-4" />
               Learning Stats
@@ -272,6 +278,11 @@ export default function Profile() {
                 </Button>
               </CardContent>
             </Card>
+          </TabsContent>
+
+          {/* Achievements Tab */}
+          <TabsContent value="achievements">
+            <AchievementsDisplay />
           </TabsContent>
 
           {/* Learning Stats Tab */}
