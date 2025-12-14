@@ -110,7 +110,7 @@ const Auth = () => {
             <div className="h-10 w-10 rounded-lg bg-white/20 flex items-center justify-center">
               <span className="text-white font-bold text-xl">L</span>
             </div>
-            <span className="text-white font-semibold text-xl">LearnHub</span>
+            <span className="text-white font-semibold text-xl">DataLearn</span>
           </div>
           <div className="flex w-full flex-col items-start gap-4">
             <span className="w-full text-3xl text-white leading-tight font-semibold">
