@@ -153,7 +153,70 @@ const CourseForum = () => {
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        {/* Top Filters Bar */}
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold text-foreground mb-1">Course Forum</h1>
+            <p className="text-muted-foreground">Discuss courses with fellow learners</p>
+          </div>
+          <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
+            <DialogTrigger asChild>
+              <Button onClick={() => !user && navigate("/auth")}>
+                <Plus className="w-4 h-4 mr-2" /> New Post
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-lg">
+              <DialogHeader>
+                <DialogTitle>Create New Post</DialogTitle>
+                <DialogDescription>Ask a question or start a discussion</DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 pt-4">
+                <div className="space-y-2">
+                  <Label>Title</Label>
+                  <Input
+                    placeholder="What's your question?"
+                    value={newPostTitle}
+                    onChange={(e) => setNewPostTitle(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Course (optional)</Label>
+                  <Select value={newPostCourse} onValueChange={setNewPostCourse}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a course" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {courses.map((course) => (
+                        <SelectItem key={course.id} value={course.id}>
+                          {course.title}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Content</Label>
+                  <Textarea
+                    placeholder="Describe your question in detail..."
+                    rows={6}
+                    value={newPostContent}
+                    onChange={(e) => setNewPostContent(e.target.value)}
+                  />
+                </div>
+                <Button 
+                  className="w-full" 
+                  onClick={handleCreatePost}
+                  disabled={!newPostTitle || !newPostContent || createPost.isPending}
+                >
+                  {createPost.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                  Post Question
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+        </div>
+
+        {/* Filters Bar */}
         <div className="flex flex-wrap items-center gap-4">
           <Select value={selectedCourse} onValueChange={setSelectedCourse}>
             <SelectTrigger className="w-48">
@@ -187,165 +250,99 @@ const CourseForum = () => {
           </div>
         </div>
 
-        {/* Main Content */}
-        <div>
-          {/* Header */}
-          <div className="flex flex-col sm:flex-row justify-between gap-4 mb-6">
-            <div>
-              <h1 className="text-3xl font-bold text-foreground mb-1">Course Forum</h1>
-              <p className="text-muted-foreground">Discuss courses with fellow learners</p>
-            </div>
-            <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
-              <DialogTrigger asChild>
-                <Button onClick={() => !user && navigate("/auth")}>
-                  <Plus className="w-4 h-4 mr-2" /> New Post
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-lg">
-                <DialogHeader>
-                  <DialogTitle>Create New Post</DialogTitle>
-                  <DialogDescription>Ask a question or start a discussion</DialogDescription>
-                </DialogHeader>
-                <div className="space-y-4 pt-4">
-                  <div className="space-y-2">
-                    <Label>Title</Label>
-                    <Input
-                      placeholder="What's your question?"
-                      value={newPostTitle}
-                      onChange={(e) => setNewPostTitle(e.target.value)}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Course (optional)</Label>
-                    <Select value={newPostCourse} onValueChange={setNewPostCourse}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a course" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {courses.map((course) => (
-                          <SelectItem key={course.id} value={course.id}>
-                            {course.title}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Content</Label>
-                    <Textarea
-                      placeholder="Describe your question in detail..."
-                      rows={6}
-                      value={newPostContent}
-                      onChange={(e) => setNewPostContent(e.target.value)}
-                    />
-                  </div>
-                  <Button 
-                    className="w-full" 
-                    onClick={handleCreatePost}
-                    disabled={!newPostTitle || !newPostContent || createPost.isPending}
-                  >
-                    {createPost.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-                    Post Question
-                  </Button>
-                </div>
-              </DialogContent>
-            </Dialog>
+        {/* Search & Sort */}
+        <div className="flex flex-col sm:flex-row gap-3">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              placeholder="Search discussions..."
+              className="pl-10"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
           </div>
+          <Select value={sortBy} onValueChange={(v) => setSortBy(v as SortOption)}>
+            <SelectTrigger className="w-full sm:w-40">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="recent">Most Recent</SelectItem>
+              <SelectItem value="upvoted">Most Upvoted</SelectItem>
+              <SelectItem value="unanswered">Unanswered</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
 
-          {/* Search & Sort */}
-          <div className="flex flex-col sm:flex-row gap-3 mb-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input
-                placeholder="Search discussions..."
-                className="pl-10"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-            </div>
-            <Select value={sortBy} onValueChange={(v) => setSortBy(v as SortOption)}>
-              <SelectTrigger className="w-full sm:w-40">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="recent">Most Recent</SelectItem>
-                <SelectItem value="upvoted">Most Upvoted</SelectItem>
-                <SelectItem value="unanswered">Unanswered</SelectItem>
-              </SelectContent>
-            </Select>
+        {/* Thread List */}
+        {filteredPosts.length === 0 ? (
+          <div className="text-center py-12">
+            <MessageCircle className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+            <p className="text-muted-foreground">No discussions found.</p>
+            <p className="text-sm text-muted-foreground mt-2">Be the first to start a conversation!</p>
           </div>
-
-          {/* Thread List */}
-          {filteredPosts.length === 0 ? (
-            <div className="text-center py-12">
-              <MessageCircle className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-              <p className="text-muted-foreground">No discussions found.</p>
-              <p className="text-sm text-muted-foreground mt-2">Be the first to start a conversation!</p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {filteredPosts.map((post) => (
-                <Card
-                  key={post.id}
-                  className="hover:border-primary/50 transition-colors cursor-pointer"
-                  onClick={() => setSelectedThread(post)}
-                >
-                  <CardContent className="p-4">
-                    <div className="flex gap-4">
-                      <Avatar className="w-10 h-10">
-                        <AvatarImage src={post.author?.avatar_url || undefined} />
-                        <AvatarFallback>{post.author?.name?.[0] || "U"}</AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-start justify-between gap-2">
-                          <div>
-                            <div className="flex items-center gap-2 mb-1">
-                              <h3 className="font-semibold text-foreground truncate">
-                                {post.title}
-                              </h3>
-                              {post.status === "answered" && (
-                                <Badge variant="default" className="gap-1">
-                                  <CheckCircle className="w-3 h-3" /> Answered
-                                </Badge>
-                              )}
-                              {post.is_pinned && (
-                                <Badge variant="secondary">Pinned</Badge>
-                              )}
-                            </div>
-                            <p className="text-sm text-muted-foreground line-clamp-2 mb-2">
-                              {post.content}
-                            </p>
+        ) : (
+          <div className="space-y-3">
+            {filteredPosts.map((post) => (
+              <Card
+                key={post.id}
+                className="hover:border-primary/50 transition-colors cursor-pointer"
+                onClick={() => setSelectedThread(post)}
+              >
+                <CardContent className="p-4">
+                  <div className="flex gap-4">
+                    <Avatar className="w-10 h-10">
+                      <AvatarImage src={post.author?.avatar_url || undefined} />
+                      <AvatarFallback>{post.author?.name?.[0] || "U"}</AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <div className="flex items-center gap-2 mb-1">
+                            <h3 className="font-semibold text-foreground truncate">
+                              {post.title}
+                            </h3>
+                            {post.status === "answered" && (
+                              <Badge variant="default" className="gap-1">
+                                <CheckCircle className="w-3 h-3" /> Answered
+                              </Badge>
+                            )}
+                            {post.is_pinned && (
+                              <Badge variant="secondary">Pinned</Badge>
+                            )}
                           </div>
-                          <ChevronRight className="w-5 h-5 text-muted-foreground flex-shrink-0" />
+                          <p className="text-sm text-muted-foreground line-clamp-2 mb-2">
+                            {post.content}
+                          </p>
                         </div>
-                        <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                          <span>{post.author?.name || "Anonymous"}</span>
-                          {post.course && (
-                            <Badge variant="outline" className="text-xs">
-                              {post.course.title}
-                            </Badge>
-                          )}
-                          <span className="flex items-center gap-1">
-                            <MessageSquare className="w-3 h-3" /> {post.replies_count || 0}
-                          </span>
-                          <button 
-                            className="flex items-center gap-1 hover:text-primary transition-colors"
-                            onClick={(e) => handleUpvote(post.id, e)}
-                          >
-                            <ThumbsUp className="w-3 h-3" /> {post.upvotes || 0}
-                          </button>
-                          <span className="flex items-center gap-1">
-                            <Clock className="w-3 h-3" /> {formatTimeAgo(post.updated_at)}
-                          </span>
-                        </div>
+                        <ChevronRight className="w-5 h-5 text-muted-foreground flex-shrink-0" />
+                      </div>
+                      <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                        <span>{post.author?.name || "Anonymous"}</span>
+                        {post.course && (
+                          <Badge variant="outline" className="text-xs">
+                            {post.course.title}
+                          </Badge>
+                        )}
+                        <span className="flex items-center gap-1">
+                          <MessageSquare className="w-3 h-3" /> {post.replies_count || 0}
+                        </span>
+                        <button 
+                          className="flex items-center gap-1 hover:text-primary transition-colors"
+                          onClick={(e) => handleUpvote(post.id, e)}
+                        >
+                          <ThumbsUp className="w-3 h-3" /> {post.upvotes || 0}
+                        </button>
+                        <span className="flex items-center gap-1">
+                          <Clock className="w-3 h-3" /> {formatTimeAgo(post.updated_at)}
+                        </span>
                       </div>
                     </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
-        </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
       </div>
     </DashboardLayout>
   );
