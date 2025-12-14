@@ -10,9 +10,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, MoreVertical, Plus, Edit, Trash2, Eye, Users, Copy, Archive, Star, Loader2, BookOpen } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Search, MoreVertical, Plus, Edit, Trash2, Eye, Users, Copy, Archive, Star, Loader2, BookOpen, HelpCircle } from "lucide-react";
 import { useAdminCourses, Course } from "@/hooks/useAdminCourses";
 import { CurriculumBuilder } from "@/components/admin/CurriculumBuilder";
+import { QuizBuilder } from "@/components/admin/QuizBuilder";
 import { format } from "date-fns";
 
 const CourseManagement = () => {
@@ -365,7 +367,7 @@ const CourseManagement = () => {
                           </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => setCurriculumCourse(course)}>
                             <BookOpen className="w-4 h-4 mr-2" />
-                            Manage Curriculum
+                            Manage Content
                           </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => handleDuplicateCourse(course)}>
                             <Copy className="w-4 h-4 mr-2" />
@@ -398,19 +400,36 @@ const CourseManagement = () => {
         </CardContent>
       </Card>
 
-      {/* Curriculum Builder Dialog */}
+      {/* Course Content Builder Dialog (Curriculum + Quizzes) */}
       <Dialog open={!!curriculumCourse} onOpenChange={(open) => !open && setCurriculumCourse(null)}>
         <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
-              {curriculumCourse?.title} - Curriculum
+              {curriculumCourse?.title} - Course Content
             </DialogTitle>
           </DialogHeader>
           {curriculumCourse && (
-            <CurriculumBuilder
-              courseId={curriculumCourse.id}
-              courseTitle={curriculumCourse.title}
-            />
+            <Tabs defaultValue="curriculum" className="mt-2">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="curriculum" className="gap-2">
+                  <BookOpen className="w-4 h-4" />
+                  Curriculum
+                </TabsTrigger>
+                <TabsTrigger value="quizzes" className="gap-2">
+                  <HelpCircle className="w-4 h-4" />
+                  Quizzes
+                </TabsTrigger>
+              </TabsList>
+              <TabsContent value="curriculum" className="mt-4">
+                <CurriculumBuilder
+                  courseId={curriculumCourse.id}
+                  courseTitle={curriculumCourse.title}
+                />
+              </TabsContent>
+              <TabsContent value="quizzes" className="mt-4">
+                <QuizBuilder courseId={curriculumCourse.id} />
+              </TabsContent>
+            </Tabs>
           )}
         </DialogContent>
       </Dialog>
