@@ -681,16 +681,16 @@ export default function CapstoneGrading() {
               <div className="space-y-2">
                 <Label htmlFor="course">Linked Course</Label>
                 <Select
-                  value={projectForm.course_id}
+                  value={projectForm.course_id || "none"}
                   onValueChange={(value) =>
-                    setProjectForm({ ...projectForm, course_id: value })
+                    setProjectForm({ ...projectForm, course_id: value === "none" ? "" : value })
                   }
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select a course (optional)" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">No course</SelectItem>
+                    <SelectItem value="none">No course</SelectItem>
                     {courses.map((course) => (
                       <SelectItem key={course.id} value={course.id}>
                         {course.title}
