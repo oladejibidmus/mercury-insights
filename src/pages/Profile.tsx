@@ -96,12 +96,17 @@ export default function Profile() {
   const fetchStats = async () => {
     if (!user) return;
 
-    // Fetch completed courses count
-    const { count: enrollmentCount } = await supabase
+    // Fetch all enrollments
+    const { data: enrollments } = await supabase
       .from("enrollments")
-      .select("*", { count: "exact", head: true })
-      .eq("user_id", user.id)
-      .eq("status", "completed");
+      .select("course_id, status")
+      .eq("user_id", user.id);
+
+    // Fetch progress data to calculate hours
+    const { data: progressData } = await supabase
+      .from("course_progress")
+      .select("course_id, progress_percentage")
+      .eq("user_id", user.id);
 
     // Fetch certificates count
     const { count: certCount } = await supabase
@@ -109,9 +114,22 @@ export default function Profile() {
       .select("*", { count: "exact", head: true })
       .eq("user_id", user.id);
 
+    // Calculate completed courses (100% progress or status = completed)
+    const completedIds = new Set(
+      progressData?.filter(p => Number(p.progress_percentage) >= 100).map(p => p.course_id) || []
+    );
+    const enrollmentCompleted = enrollments?.filter(e => e.status === "completed").length || 0;
+    const progressCompleted = completedIds.size;
+    const completedCourses = Math.max(enrollmentCompleted, progressCompleted);
+
+    // Calculate total hours based on progress
+    const totalProgress = progressData?.reduce((acc, p) => acc + Number(p.progress_percentage), 0) || 0;
+    // Assume each course is ~10 hours, calculate based on progress
+    const hoursLearned = Math.round((totalProgress / 100) * 10);
+
     setStats({
-      coursesCompleted: enrollmentCount || 0,
-      hoursLearned: (enrollmentCount || 0) * 12, // Estimate
+      coursesCompleted: completedCourses,
+      hoursLearned: hoursLearned || (enrollments?.length || 0) * 4, // Fallback estimate
       certificatesEarned: certCount || 0
     });
   };
