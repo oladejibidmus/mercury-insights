@@ -1,4 +1,4 @@
-import { LayoutDashboard, Users, BookOpen, MessageSquare, BarChart3, ChevronLeft, ChevronRight, Search, Shield, Settings, LogOut } from "lucide-react";
+import { LayoutDashboard, Users, BookOpen, MessageSquare, BarChart3, ChevronLeft, ChevronRight, Search, Shield, Settings, LogOut, ClipboardCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Link, useLocation, useNavigate } from "react-router-dom";
@@ -31,6 +31,12 @@ const managementItems = [
     icon: BookOpen,
     label: "Course Management",
     path: "/admin/courses"
+  },
+  {
+    id: "capstone-grading",
+    icon: ClipboardCheck,
+    label: "Capstone Grading",
+    path: "/admin/capstone-grading"
   },
 ];
 

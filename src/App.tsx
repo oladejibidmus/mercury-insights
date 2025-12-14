@@ -19,6 +19,7 @@ import QA from "./pages/QA";
 import Auth from "./pages/Auth";
 import AdminSignup from "./pages/AdminSignup";
 import Profile from "./pages/Profile";
+import CoursePlayerPage from "./pages/CoursePlayerPage";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import UserManagement from "./pages/admin/UserManagement";
 import CourseManagement from "./pages/admin/CourseManagement";
@@ -43,6 +44,7 @@ const App = () => (
               <Route path="/admin-signup" element={<AdminSignup />} />
               <Route path="/explore-courses" element={<ExploreCourses />} />
               <Route path="/learning-path" element={<LearningPath />} />
+              <Route path="/course/:courseId" element={<CoursePlayerPage />} />
               <Route path="/quiz-assessment" element={<QuizAssessment />} />
               <Route path="/capstone-project" element={<CapstoneProject />} />
               <Route path="/certificates" element={<Certificates />} />
