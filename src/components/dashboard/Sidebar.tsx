@@ -1,10 +1,9 @@
 import { useState, useMemo } from "react";
-import { LayoutDashboard, Compass, Route, ClipboardCheck, FolderKanban, Award, MessageSquare, HelpCircle, ChevronLeft, ChevronRight, Search, Shield, LogOut, User, X } from "lucide-react";
+import { LayoutDashboard, Compass, Route, ClipboardCheck, FolderKanban, Award, MessageSquare, HelpCircle, ChevronLeft, ChevronRight, Search, LogOut, User, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { useAdminCheck } from "@/hooks/useAdminCheck";
 import { toast } from "sonner";
 
 interface SidebarProps {
@@ -60,20 +59,12 @@ const forumItems = [{
   path: "/qa"
 }];
 
-const adminItem = {
-  id: "admin",
-  icon: Shield,
-  label: "Admin Portal",
-  path: "/admin"
-};
-
 // All nav items for search
 const allNavItems = [
   ...topItems,
   ...myLearningItems,
   ...progressItems,
   ...forumItems,
-  { ...adminItem }
 ];
 
 interface NavItemProps {
@@ -142,7 +133,6 @@ export function Sidebar({
   onToggle
 }: SidebarProps) {
   const { user, signOut } = useAuth();
-  const { isAdmin } = useAdminCheck();
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -256,17 +246,6 @@ export function Sidebar({
           />
         ))}
 
-        {/* Admin Section - Only visible to admins */}
-        {isAdmin && (
-          <>
-            <SectionHeader label="Admin" isExpanded={isExpanded} />
-            <NavItem 
-              {...adminItem} 
-              isExpanded={isExpanded}
-              highlight={highlightedIds.has(adminItem.id)}
-            />
-          </>
-        )}
 
         {/* Profile Section */}
         <SectionHeader label="Account" isExpanded={isExpanded} />

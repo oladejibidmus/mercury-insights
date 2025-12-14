@@ -187,7 +187,7 @@ export function AdminSidebar({ isExpanded, onToggle }: AdminSidebarProps) {
         ))}
       </nav>
 
-      {/* Sign Out and Back to Student Portal */}
+      {/* Sign Out */}
       <div className="px-2 pb-2 space-y-1 border-t border-sidebar-border pt-2">
         <button
           onClick={handleSignOut}
@@ -197,14 +197,6 @@ export function AdminSidebar({ isExpanded, onToggle }: AdminSidebarProps) {
           <LogOut className="w-5 h-5 flex-shrink-0" />
           {isExpanded && <span className="text-sm font-medium">Sign Out</span>}
         </button>
-        <Link
-          to="/dashboard"
-          className="ripple flex items-center gap-3 h-10 rounded-lg px-3 w-full text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-all duration-200 text-sm"
-          title={!isExpanded ? "Back to Student Portal" : undefined}
-        >
-          <ChevronLeft className="w-4 h-4" />
-          {isExpanded && <span>Back to Student Portal</span>}
-        </Link>
       </div>
 
       {/* Toggle Button */}
