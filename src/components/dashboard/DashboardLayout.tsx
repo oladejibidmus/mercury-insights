@@ -33,7 +33,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
         {/* Main Content */}
         <main className={cn(
-          "flex-1 p-4 md:p-8 transition-all duration-300",
+          "flex-1 px-4 py-6 md:px-6 transition-all duration-300",
           "lg:ml-0",
           isExpanded ? "lg:ml-56" : "lg:ml-16"
         )}>
