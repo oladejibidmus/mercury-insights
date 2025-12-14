@@ -152,54 +152,43 @@ const CourseForum = () => {
 
   return (
     <DashboardLayout>
-      <div className="flex flex-col lg:flex-row gap-6">
-        {/* Sidebar Filters */}
-        <div className="w-full lg:w-64 space-y-4">
-          <Card>
-            <CardContent className="p-4 space-y-4">
-              <div className="space-y-2">
-                <Label className="text-xs text-muted-foreground">Course</Label>
-                <Select value={selectedCourse} onValueChange={setSelectedCourse}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="All Courses" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Courses</SelectItem>
-                    {courses.map((course) => (
-                      <SelectItem key={course.id} value={course.id}>
-                        {course.title}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+      <div className="space-y-6">
+        {/* Top Filters Bar */}
+        <div className="flex flex-wrap items-center gap-4">
+          <Select value={selectedCourse} onValueChange={setSelectedCourse}>
+            <SelectTrigger className="w-48">
+              <SelectValue placeholder="All Courses" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Courses</SelectItem>
+              {courses.map((course) => (
+                <SelectItem key={course.id} value={course.id}>
+                  {course.title}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
 
-              <div className="space-y-2">
-                <Label className="text-xs text-muted-foreground">Status</Label>
-                <div className="flex flex-wrap gap-2">
-                  {[
-                    { value: "all", label: "All" },
-                    { value: "answered", label: "Answered" },
-                    { value: "unanswered", label: "Unanswered" },
-                  ].map((filter) => (
-                    <Button
-                      key={filter.value}
-                      variant={statusFilter === filter.value ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => setStatusFilter(filter.value as StatusFilter)}
-                      className="text-xs"
-                    >
-                      {filter.label}
-                    </Button>
-                  ))}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          <div className="flex gap-2">
+            {[
+              { value: "all", label: "All" },
+              { value: "answered", label: "Answered" },
+              { value: "unanswered", label: "Unanswered" },
+            ].map((filter) => (
+              <Button
+                key={filter.value}
+                variant={statusFilter === filter.value ? "default" : "outline"}
+                size="sm"
+                onClick={() => setStatusFilter(filter.value as StatusFilter)}
+              >
+                {filter.label}
+              </Button>
+            ))}
+          </div>
         </div>
 
         {/* Main Content */}
-        <div className="flex-1">
+        <div>
           {/* Header */}
           <div className="flex flex-col sm:flex-row justify-between gap-4 mb-6">
             <div>
