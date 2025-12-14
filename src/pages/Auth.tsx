@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
@@ -22,6 +23,8 @@ const Auth = () => {
   const defaultTab = searchParams.get("tab") === "signup" ? "signup" : "signin";
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [fullName, setFullName] = useState("");
+  const [bio, setBio] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [resetDialogOpen, setResetDialogOpen] = useState(false);
   const [resetEmail, setResetEmail] = useState("");
@@ -50,17 +53,24 @@ const Auth = () => {
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!fullName.trim()) {
+      toast.error("Please enter your full name");
+      return;
+    }
     if (password.length < 6) {
       toast.error("Password must be at least 6 characters");
       return;
     }
     setIsLoading(true);
-    const { error } = await signUp(email, password);
+    const { error } = await signUp(email, password, { 
+      name: fullName.trim(), 
+      bio: bio.trim() || undefined 
+    });
     setIsLoading(false);
     if (error) {
       toast.error(error.message);
     } else {
-      toast.success("Account created successfully!");
+      toast.success("Account created successfully! Check your email for a welcome message.");
       navigate("/");
     }
   };
@@ -157,7 +167,18 @@ const Auth = () => {
             <TabsContent value="signup">
               <form onSubmit={handleSignUp} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="signup-email">Email</Label>
+                  <Label htmlFor="signup-name">Full Name <span className="text-destructive">*</span></Label>
+                  <Input
+                    id="signup-name"
+                    type="text"
+                    placeholder="John Doe"
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="signup-email">Email <span className="text-destructive">*</span></Label>
                   <Input
                     id="signup-email"
                     type="email"
@@ -168,7 +189,7 @@ const Auth = () => {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="signup-password">Password</Label>
+                  <Label htmlFor="signup-password">Password <span className="text-destructive">*</span></Label>
                   <Input
                     id="signup-password"
                     type="password"
@@ -177,6 +198,18 @@ const Auth = () => {
                     onChange={(e) => setPassword(e.target.value)}
                     required
                     minLength={6}
+                  />
+                  <p className="text-xs text-muted-foreground">Must be at least 6 characters</p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="signup-bio">Tell us about yourself <span className="text-muted-foreground text-xs">(optional)</span></Label>
+                  <Textarea
+                    id="signup-bio"
+                    placeholder="I'm excited to learn new skills..."
+                    value={bio}
+                    onChange={(e) => setBio(e.target.value)}
+                    rows={3}
+                    className="resize-none"
                   />
                 </div>
                 <Button type="submit" className="w-full" disabled={isLoading}>
