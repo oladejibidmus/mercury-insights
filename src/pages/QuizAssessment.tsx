@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import { useQuizzes, useQuizQuestions, useQuizAttempts, useSubmitQuiz, QuizQuestion } from "@/hooks/useQuizzes";
+import { useQuizTimer } from "@/hooks/useQuizTimer";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -10,9 +11,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { toast } from "sonner";
 import { 
   Clock, CheckCircle, XCircle, ChevronLeft, ChevronRight, 
-  RotateCcw, Trophy, AlertCircle, Code, Loader2, BookOpen
+  RotateCcw, Trophy, AlertCircle, Code, Loader2, BookOpen,
+  Timer, AlertTriangle
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -30,9 +33,23 @@ const QuizAssessment = () => {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [quizResult, setQuizResult] = useState<{ score: number; passed: boolean } | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const { data: questions = [] } = useQuizQuestions(activeQuizId);
   const activeQuiz = quizzes.find(q => q.id === activeQuizId);
+
+  const handleTimeUp = useCallback(() => {
+    if (activeQuiz && !isSubmitting) {
+      toast.warning("Time's up! Submitting your quiz...");
+      handleSubmitQuiz();
+    }
+  }, [activeQuiz, isSubmitting]);
+
+  const { formattedTime, timeColor, percentRemaining, reset: resetTimer } = useQuizTimer({
+    initialMinutes: activeQuiz?.time_limit || 30,
+    onTimeUp: handleTimeUp,
+    isActive: viewMode === "active" && !!activeQuiz,
+  });
 
   // Get last attempt for each quiz
   const getQuizStatus = (quizId: string) => {
@@ -48,6 +65,7 @@ const QuizAssessment = () => {
     setCurrentQuestionIndex(0);
     setAnswers({});
     setQuizResult(null);
+    setIsSubmitting(false);
   };
 
   const handleAnswer = (questionId: string, answer: string) => {
@@ -55,25 +73,34 @@ const QuizAssessment = () => {
   };
 
   const handleSubmitQuiz = async () => {
-    if (!activeQuiz || !user) return;
+    if (!activeQuiz || !user || isSubmitting) return;
+    
+    setIsSubmitting(true);
 
     // Calculate score
     let correct = 0;
     questions.forEach((q) => {
       if (answers[q.id] === q.correct_answer) correct++;
     });
-    const score = Math.round((correct / questions.length) * 100);
+    const score = questions.length > 0 ? Math.round((correct / questions.length) * 100) : 0;
     const passed = score >= activeQuiz.passing_score;
 
-    // Save attempt
-    await submitQuiz.mutateAsync({
-      quizId: activeQuiz.id,
-      score,
-      answers,
-    });
+    try {
+      // Save attempt
+      await submitQuiz.mutateAsync({
+        quizId: activeQuiz.id,
+        score,
+        answers,
+      });
 
-    setQuizResult({ score, passed });
-    setViewMode("results");
+      setQuizResult({ score, passed });
+      setViewMode("results");
+      resetTimer();
+    } catch (error) {
+      toast.error("Failed to submit quiz");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   if (!user) {
@@ -103,6 +130,7 @@ const QuizAssessment = () => {
     const question = questions[currentQuestionIndex];
     const answeredCount = Object.keys(answers).length;
     const progress = (answeredCount / questions.length) * 100;
+    const isLowTime = percentRemaining <= 25;
 
     return (
       <DashboardLayout>
@@ -114,11 +142,27 @@ const QuizAssessment = () => {
               <p className="text-sm text-muted-foreground">{activeQuiz.course?.title || "General"}</p>
             </div>
             <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2 text-lg font-mono bg-card border border-border rounded-lg px-4 py-2">
-                <Clock className="w-5 h-5 text-primary" />
-                <span>{activeQuiz.time_limit} min</span>
+              {/* Timer */}
+              <div className={cn(
+                "flex items-center gap-2 text-lg font-mono bg-card border rounded-lg px-4 py-2 transition-colors",
+                isLowTime ? "border-destructive bg-destructive/5" : "border-border"
+              )}>
+                <Timer className={cn("w-5 h-5", timeColor)} />
+                <span className={cn("font-bold", timeColor)}>{formattedTime}</span>
+                {isLowTime && <AlertTriangle className="w-4 h-4 text-destructive animate-pulse" />}
               </div>
             </div>
+          </div>
+
+          {/* Timer Progress Bar */}
+          <div className="mb-4">
+            <Progress 
+              value={percentRemaining} 
+              className={cn(
+                "h-1.5 transition-all",
+                isLowTime && "[&>div]:bg-destructive"
+              )} 
+            />
           </div>
 
           {/* Progress */}
@@ -185,12 +229,12 @@ const QuizAssessment = () => {
                       key={idx}
                       className={cn(
                         "flex items-center space-x-3 p-4 rounded-lg border transition-colors cursor-pointer",
-                        answers[question.id] === idx.toString()
+                        answers[question.id] === option
                           ? "border-primary bg-primary/5"
                           : "border-border hover:border-primary/50"
                       )}
                     >
-                      <RadioGroupItem value={idx.toString()} id={`option-${idx}`} />
+                      <RadioGroupItem value={option} id={`option-${idx}`} />
                       <Label htmlFor={`option-${idx}`} className="flex-1 cursor-pointer">
                         {option}
                       </Label>
@@ -207,8 +251,8 @@ const QuizAssessment = () => {
               <ChevronLeft className="w-4 h-4 mr-1" /> Previous
             </Button>
             {currentQuestionIndex === questions.length - 1 ? (
-              <Button onClick={handleSubmitQuiz} disabled={submitQuiz.isPending}>
-                {submitQuiz.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+              <Button onClick={handleSubmitQuiz} disabled={isSubmitting}>
+                {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
                 Submit Quiz
               </Button>
             ) : (
@@ -292,16 +336,16 @@ const QuizAssessment = () => {
                                 key={optIdx}
                                 className={cn(
                                   "p-2 rounded",
-                                  optIdx.toString() === question.correct_answer
+                                  opt === question.correct_answer
                                     ? "bg-primary/10 text-primary"
-                                    : userAnswer === optIdx.toString() && !isCorrect
+                                    : userAnswer === opt && !isCorrect
                                     ? "bg-destructive/10 text-destructive"
                                     : "text-muted-foreground"
                                 )}
                               >
                                 {opt}
-                                {optIdx.toString() === question.correct_answer && " ✓"}
-                                {userAnswer === optIdx.toString() && !isCorrect && " ✗"}
+                                {opt === question.correct_answer && " ✓"}
+                                {userAnswer === opt && !isCorrect && " ✗"}
                               </div>
                             ))}
                           </div>
@@ -417,29 +461,22 @@ const QuizAssessment = () => {
                       <p className="text-sm text-muted-foreground mb-2">{quiz.course?.title || "General"}</p>
                       <div className="flex items-center gap-4 text-sm text-muted-foreground">
                         <span className="flex items-center gap-1">
-                          <Clock className="w-4 h-4" /> {quiz.time_limit} min
+                          <Timer className="w-4 h-4" /> {quiz.time_limit} min
                         </span>
-                        <span>{quiz.total_questions} questions</span>
+                        <span className="flex items-center gap-1">
+                          <BookOpen className="w-4 h-4" /> {quiz.total_questions} questions
+                        </span>
                         <span>Pass: {quiz.passing_score}%</span>
                       </div>
                     </div>
-                    <div className="flex items-center gap-3">
-                      {score !== undefined && (
+                    <div className="flex items-center gap-4">
+                      {status === "completed" && score !== undefined && (
                         <div className="text-right">
-                          <span
-                            className={cn(
-                              "text-2xl font-bold",
-                              score >= quiz.passing_score ? "text-primary" : "text-destructive"
-                            )}
-                          >
-                            {score}%
-                          </span>
+                          <p className="text-2xl font-bold text-foreground">{score}%</p>
+                          <p className="text-xs text-muted-foreground">Last Score</p>
                         </div>
                       )}
-                      <Button
-                        onClick={() => startQuiz(quiz.id)}
-                        variant={status === "completed" ? "outline" : "default"}
-                      >
+                      <Button onClick={() => startQuiz(quiz.id)}>
                         {status === "completed" ? "Retake" : "Start Quiz"}
                       </Button>
                     </div>
