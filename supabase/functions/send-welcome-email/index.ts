@@ -28,7 +28,7 @@ const handler = async (req: Request): Promise<Response> => {
     const displayName = name || "Learner";
 
     const emailResponse = await resend.emails.send({
-      from: "LearnHub <onboarding@resend.dev>",
+      from: "LearnHub <noreply@mydatalearn.co.uk>",
       to: [email],
       subject: "Welcome to LearnHub! 🎓 Start Your Learning Journey",
       html: `
