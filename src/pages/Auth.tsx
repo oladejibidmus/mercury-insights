@@ -6,10 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { BookOpen, Loader2, ArrowLeft } from "lucide-react";
+import { Lightbulb, Rocket, Zap, Loader2, ArrowLeft } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -21,6 +19,7 @@ import {
 const Auth = () => {
   const [searchParams] = useSearchParams();
   const defaultTab = searchParams.get("tab") === "signup" ? "signup" : "signin";
+  const [activeTab, setActiveTab] = useState<"signin" | "signup">(defaultTab as "signin" | "signup");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
@@ -106,130 +105,191 @@ const Auth = () => {
     }
   };
 
+  const features = [
+    {
+      icon: Lightbulb,
+      title: "Spark your imagination",
+      description: "Dive into a world where your creative ideas are instantly brought to life. Let's paint your thoughts in digital strokes."
+    },
+    {
+      icon: Rocket,
+      title: "Simplify the complex",
+      description: "Say goodbye to mundane tasks. Our platform streamlines your workflow, freeing you to focus on what truly matters."
+    },
+    {
+      icon: Zap,
+      title: "Boost your brainpower",
+      description: "Elevate your learning with tailored insights and resources. It's like having a personal coach in your pocket."
+    }
+  ];
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <Card className="w-full max-w-md relative">
-        <Link 
-          to="/" 
-          className="absolute left-4 top-4 flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Back to Home
-        </Link>
-        <CardHeader className="text-center pt-12">
-          <div className="flex justify-center mb-4">
-            <div className="p-3 rounded-xl bg-primary/10">
-              <BookOpen className="h-8 w-8 text-primary" />
+    <div className="flex min-h-screen w-full flex-wrap items-center justify-center gap-12 bg-background px-12 py-12 max-md:flex-col max-md:gap-12 max-md:px-6 max-md:py-12">
+      {/* Back to Home Link */}
+      <Link 
+        to="/" 
+        className="absolute left-6 top-6 flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
+      >
+        <ArrowLeft className="h-4 w-4" />
+        Back to Home
+      </Link>
+
+      {/* Left Side - Features */}
+      <div className="flex max-w-[576px] grow shrink-0 basis-0 flex-col items-center justify-center gap-12 self-stretch max-md:h-auto max-md:w-full max-md:max-w-[576px] max-md:flex-none">
+        <div className="flex flex-col items-center justify-center gap-6 px-12 max-md:px-0 max-md:py-0">
+          {features.map((feature, index) => (
+            <div 
+              key={index} 
+              className="flex w-full items-start justify-center gap-4 px-2 py-2 animate-fade-in"
+              style={{ animationDelay: `${index * 0.1}s` }}
+            >
+              <feature.icon className="h-6 w-6 text-primary flex-shrink-0 mt-1" />
+              <div className="flex flex-col items-start gap-1">
+                <span className="w-full text-lg font-semibold text-primary">
+                  {feature.title}
+                </span>
+                <span className="w-full text-sm text-muted-foreground">
+                  {feature.description}
+                </span>
+              </div>
             </div>
-          </div>
-          <CardTitle className="text-2xl">Welcome to LearnHub</CardTitle>
-          <CardDescription>Sign in to access your courses</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Tabs defaultValue={defaultTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="signin">Sign In</TabsTrigger>
-              <TabsTrigger value="signup">Sign Up</TabsTrigger>
-            </TabsList>
-            <TabsContent value="signin">
-              <form onSubmit={handleSignIn} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="signin-email">Email</Label>
-                  <Input
-                    id="signin-email"
-                    type="email"
-                    placeholder="you@example.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                  />
+          ))}
+        </div>
+      </div>
+
+      {/* Right Side - Auth Form */}
+      <div className="flex max-w-[448px] grow shrink-0 basis-0 flex-col items-center justify-center gap-6 rounded-md bg-card px-12 py-12 shadow-lg border border-border">
+        <div className="flex w-full flex-col items-center justify-center gap-8">
+          <span className="w-full text-2xl font-semibold text-foreground text-center">
+            {activeTab === "signup" ? "Create your account" : "Welcome back"}
+          </span>
+
+          {activeTab === "signin" ? (
+            <form onSubmit={handleSignIn} className="flex w-full flex-col items-start justify-center gap-6">
+              <div className="w-full space-y-2">
+                <Label htmlFor="signin-email">Email</Label>
+                <Input
+                  id="signin-email"
+                  type="email"
+                  placeholder="you@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  className="h-10"
+                />
+              </div>
+              <div className="w-full space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="signin-password">Password</Label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setResetEmail(email);
+                      setResetDialogOpen(true);
+                    }}
+                    className="text-xs text-primary hover:underline"
+                  >
+                    Forgot password?
+                  </button>
                 </div>
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="signin-password">Password</Label>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setResetEmail(email);
-                        setResetDialogOpen(true);
-                      }}
-                      className="text-xs text-primary hover:underline"
-                    >
-                      Forgot password?
-                    </button>
-                  </div>
-                  <Input
-                    id="signin-password"
-                    type="password"
-                    placeholder="••••••••"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                  />
-                </div>
-                <Button type="submit" className="w-full" disabled={isLoading}>
-                  {isLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                <Input
+                  id="signin-password"
+                  type="password"
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  className="h-10"
+                />
+              </div>
+              <Button type="submit" className="h-10 w-full" disabled={isLoading}>
+                {isLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                Sign In
+              </Button>
+              <div className="flex w-full flex-wrap items-center justify-center gap-1">
+                <span className="text-sm text-foreground">
+                  Don't have an account?
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("signup")}
+                  className="text-sm font-medium text-primary hover:underline"
+                >
+                  Sign Up
+                </button>
+              </div>
+            </form>
+          ) : (
+            <form onSubmit={handleSignUp} className="flex w-full flex-col items-start justify-center gap-6">
+              <div className="w-full space-y-2">
+                <Label htmlFor="signup-name">Name <span className="text-destructive">*</span></Label>
+                <Input
+                  id="signup-name"
+                  type="text"
+                  placeholder="John Doe"
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  required
+                  className="h-10"
+                />
+              </div>
+              <div className="w-full space-y-2">
+                <Label htmlFor="signup-email">Email <span className="text-destructive">*</span></Label>
+                <Input
+                  id="signup-email"
+                  type="email"
+                  placeholder="you@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  className="h-10"
+                />
+              </div>
+              <div className="w-full space-y-2">
+                <Label htmlFor="signup-password">Password <span className="text-destructive">*</span></Label>
+                <Input
+                  id="signup-password"
+                  type="password"
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  minLength={6}
+                  className="h-10"
+                />
+                <p className="text-xs text-muted-foreground">Must be at least 6 characters</p>
+              </div>
+              <div className="w-full space-y-2">
+                <Label htmlFor="signup-bio">Tell us about yourself <span className="text-muted-foreground text-xs">(optional)</span></Label>
+                <Textarea
+                  id="signup-bio"
+                  placeholder="I'm excited to learn new skills..."
+                  value={bio}
+                  onChange={(e) => setBio(e.target.value)}
+                  rows={3}
+                  className="resize-none"
+                />
+              </div>
+              <Button type="submit" className="h-10 w-full" disabled={isLoading}>
+                {isLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                Create account
+              </Button>
+              <div className="flex w-full flex-wrap items-center justify-center gap-1">
+                <span className="text-sm text-foreground">
+                  Have an account?
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("signin")}
+                  className="text-sm font-medium text-primary hover:underline"
+                >
                   Sign In
-                </Button>
-              </form>
-            </TabsContent>
-            <TabsContent value="signup">
-              <form onSubmit={handleSignUp} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="signup-name">Full Name <span className="text-destructive">*</span></Label>
-                  <Input
-                    id="signup-name"
-                    type="text"
-                    placeholder="John Doe"
-                    value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="signup-email">Email <span className="text-destructive">*</span></Label>
-                  <Input
-                    id="signup-email"
-                    type="email"
-                    placeholder="you@example.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="signup-password">Password <span className="text-destructive">*</span></Label>
-                  <Input
-                    id="signup-password"
-                    type="password"
-                    placeholder="••••••••"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                    minLength={6}
-                  />
-                  <p className="text-xs text-muted-foreground">Must be at least 6 characters</p>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="signup-bio">Tell us about yourself <span className="text-muted-foreground text-xs">(optional)</span></Label>
-                  <Textarea
-                    id="signup-bio"
-                    placeholder="I'm excited to learn new skills..."
-                    value={bio}
-                    onChange={(e) => setBio(e.target.value)}
-                    rows={3}
-                    className="resize-none"
-                  />
-                </div>
-                <Button type="submit" className="w-full" disabled={isLoading}>
-                  {isLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-                  Create Account
-                </Button>
-              </form>
-            </TabsContent>
-          </Tabs>
-        </CardContent>
-      </Card>
+                </button>
+              </div>
+            </form>
+          )}
+        </div>
+      </div>
 
       {/* Password Reset Dialog */}
       <Dialog open={resetDialogOpen} onOpenChange={setResetDialogOpen}>
