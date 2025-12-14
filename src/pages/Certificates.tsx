@@ -3,10 +3,12 @@ import { useNavigate } from "react-router-dom";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import { useCertificates, useUserProgress } from "@/hooks/useCertificates";
 import { useAuth } from "@/contexts/AuthContext";
+import { generateCertificatePDF, shareCertificate } from "@/lib/generateCertificatePDF";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { toast } from "sonner";
 import {
   Award,
   Download,
@@ -15,7 +17,10 @@ import {
   BookOpen,
   Target,
   Loader2,
+  Copy,
+  Check,
 } from "lucide-react";
+import { format } from "date-fns";
 
 const Certificates = () => {
   const { user } = useAuth();
@@ -24,6 +29,8 @@ const Certificates = () => {
   const { data: progressStats } = useUserProgress();
 
   const [dateFilter, setDateFilter] = useState("all");
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
 
   const filteredCertificates = certificates.filter((cert) => {
     if (dateFilter === "all") return true;
@@ -41,6 +48,60 @@ const Certificates = () => {
     }
     return true;
   });
+
+  const handleDownload = async (cert: typeof certificates[0]) => {
+    if (!user) return;
+
+    setDownloadingId(cert.id);
+    try {
+      // Get user profile name
+      const recipientName = user.user_metadata?.name || user.email || "Student";
+      
+      generateCertificatePDF({
+        recipientName,
+        courseName: cert.course?.title || "Course",
+        instructorName: cert.course?.instructor || "Instructor",
+        completionDate: format(new Date(cert.issued_at), "MMMM d, yyyy"),
+        credentialId: cert.credential_id,
+      });
+      
+      toast.success("Certificate downloaded!");
+    } catch (error) {
+      toast.error("Failed to generate certificate");
+    } finally {
+      setDownloadingId(null);
+    }
+  };
+
+  const handleShare = async (cert: typeof certificates[0]) => {
+    const shareUrl = `${window.location.origin}/verify-certificate/${cert.credential_id}`;
+    
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: `Certificate: ${cert.course?.title}`,
+          text: `I just earned a certificate for completing ${cert.course?.title} on LearnHub!`,
+          url: shareUrl,
+        });
+      } catch {
+        // User cancelled or share failed, copy to clipboard instead
+        await copyToClipboard(cert.credential_id, shareUrl);
+      }
+    } else {
+      await copyToClipboard(cert.credential_id, shareUrl);
+    }
+  };
+
+  const copyToClipboard = async (certId: string, url: string) => {
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopiedId(certId);
+      toast.success("Certificate link copied to clipboard!");
+      setTimeout(() => setCopiedId(null), 2000);
+    } catch {
+      toast.error("Failed to copy link");
+    }
+  };
 
   if (!user) {
     return (
@@ -123,20 +184,38 @@ const Certificates = () => {
                   <CardContent className="p-4">
                     <h3 className="font-semibold text-foreground mb-1">{cert.course?.title || "Course"}</h3>
                     <p className="text-sm text-muted-foreground mb-2">
-                      Completed {new Date(cert.issued_at).toLocaleDateString()}
+                      Completed {format(new Date(cert.issued_at), "MMM d, yyyy")}
                     </p>
                     <p className="text-xs text-muted-foreground mb-3">
                       Instructor: {cert.course?.instructor || "Unknown"}
                     </p>
-                    <p className="text-xs text-muted-foreground mb-4">
-                      Credential ID: {cert.credential_id}
+                    <p className="text-xs text-muted-foreground mb-4 font-mono">
+                      ID: {cert.credential_id}
                     </p>
                     <div className="flex gap-2">
-                      <Button size="sm" className="flex-1">
-                        <Download className="w-4 h-4 mr-1" /> Download
+                      <Button 
+                        size="sm" 
+                        className="flex-1"
+                        onClick={() => handleDownload(cert)}
+                        disabled={downloadingId === cert.id}
+                      >
+                        {downloadingId === cert.id ? (
+                          <Loader2 className="w-4 h-4 animate-spin mr-1" />
+                        ) : (
+                          <Download className="w-4 h-4 mr-1" />
+                        )}
+                        Download
                       </Button>
-                      <Button size="sm" variant="outline">
-                        <Share2 className="w-4 h-4" />
+                      <Button 
+                        size="sm" 
+                        variant="outline"
+                        onClick={() => handleShare(cert)}
+                      >
+                        {copiedId === cert.credential_id ? (
+                          <Check className="w-4 h-4" />
+                        ) : (
+                          <Share2 className="w-4 h-4" />
+                        )}
                       </Button>
                     </div>
                   </CardContent>
