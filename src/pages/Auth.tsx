@@ -1,13 +1,14 @@
 import { useState, useEffect } from "react";
-import { useNavigate, useSearchParams, Link } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
-import { Lightbulb, Rocket, Zap, Loader2, ArrowLeft } from "lucide-react";
+import { Check, Github, Mail, Loader2 } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -24,6 +25,7 @@ const Auth = () => {
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
   const [bio, setBio] = useState("");
+  const [rememberMe, setRememberMe] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [resetDialogOpen, setResetDialogOpen] = useState(false);
   const [resetEmail, setResetEmail] = useState("");
@@ -33,7 +35,6 @@ const Auth = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Don't auto-redirect if user just signed up - let them see the success message
     if (user && !justSignedUp) {
       navigate("/explore-courses");
     }
@@ -76,7 +77,6 @@ const Auth = () => {
       toast.success("Account created successfully! Check your email for a welcome message.", {
         duration: 4000,
       });
-      // Delay navigation to let user see the success message
       setTimeout(() => {
         navigate("/explore-courses");
       }, 2000);
@@ -106,68 +106,83 @@ const Auth = () => {
   };
 
   const features = [
-    {
-      icon: Lightbulb,
-      title: "Spark your imagination",
-      description: "Dive into a world where your creative ideas are instantly brought to life. Let's paint your thoughts in digital strokes."
-    },
-    {
-      icon: Rocket,
-      title: "Simplify the complex",
-      description: "Say goodbye to mundane tasks. Our platform streamlines your workflow, freeing you to focus on what truly matters."
-    },
-    {
-      icon: Zap,
-      title: "Boost your brainpower",
-      description: "Elevate your learning with tailored insights and resources. It's like having a personal coach in your pocket."
-    }
+    "100+ hands-on courses in Python, SQL, Tableau, and Power BI",
+    "Industry-recognized certificates upon completion",
+    "Learn at your own pace with lifetime access",
+    "Real-time Q&A forum with expert instructors"
   ];
 
   return (
-    <div className="flex min-h-screen w-full flex-wrap items-center justify-center gap-12 bg-background px-12 py-12 max-md:flex-col max-md:gap-12 max-md:px-6 max-md:py-12">
-      {/* Back to Home Link */}
-      <Link 
-        to="/" 
-        className="absolute left-6 top-6 flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
-      >
-        <ArrowLeft className="h-4 w-4" />
-        Back to Home
-      </Link>
-
-      {/* Left Side - Features */}
-      <div className="flex max-w-[576px] grow shrink-0 basis-0 flex-col items-center justify-center gap-12 self-stretch max-md:h-auto max-md:w-full max-md:max-w-[576px] max-md:flex-none">
-        <div className="flex flex-col items-center justify-center gap-6 px-12 max-md:px-0 max-md:py-0">
+    <div className="flex w-full items-start min-h-screen max-md:flex-col max-md:flex-nowrap max-md:gap-0">
+      {/* Left Panel - Marketing */}
+      <div className="flex min-w-[448px] grow shrink-0 basis-0 flex-col items-start justify-between self-stretch px-12 py-12 bg-gradient-to-br from-primary to-primary/80 max-md:w-full max-md:min-w-0 max-md:grow max-md:shrink-0 max-md:basis-0 max-md:px-6 max-md:py-8">
+        <div className="flex w-full flex-col items-start gap-8">
+          <div className="flex items-center gap-2">
+            <div className="h-10 w-10 rounded-lg bg-white/20 flex items-center justify-center">
+              <span className="text-white font-bold text-xl">L</span>
+            </div>
+            <span className="text-white font-semibold text-xl">LearnHub</span>
+          </div>
+          <div className="flex w-full flex-col items-start gap-4">
+            <span className="w-full text-3xl font-bold text-white leading-tight">
+              Master Data Analytics with Expert-Led Courses
+            </span>
+            <span className="w-full text-lg font-medium text-white/90">
+              Join thousands of learners advancing their careers in data science, analytics, and visualization
+            </span>
+          </div>
+        </div>
+        
+        <div className="flex w-full flex-col items-start gap-6 my-8">
           {features.map((feature, index) => (
-            <div 
-              key={index} 
-              className="flex w-full items-start justify-center gap-4 px-2 py-2 animate-fade-in"
-              style={{ animationDelay: `${index * 0.1}s` }}
-            >
-              <feature.icon className="h-6 w-6 text-primary flex-shrink-0 mt-1" />
-              <div className="flex flex-col items-start gap-1">
-                <span className="w-full text-lg font-semibold text-primary">
-                  {feature.title}
-                </span>
-                <span className="w-full text-sm text-muted-foreground">
-                  {feature.description}
-                </span>
-              </div>
+            <div key={index} className="flex items-center gap-3">
+              <Check className="h-5 w-5 text-white flex-shrink-0" />
+              <span className="text-sm text-white">
+                {feature}
+              </span>
             </div>
           ))}
         </div>
+
+        <div className="flex w-full flex-col items-start gap-2">
+          <span className="text-xs text-white/70">
+            Trusted by data professionals worldwide
+          </span>
+          <div className="flex items-center gap-4">
+            <div className="h-6 w-16 bg-white/20 rounded" />
+            <div className="h-6 w-16 bg-white/20 rounded" />
+            <div className="h-6 w-16 bg-white/20 rounded" />
+          </div>
+        </div>
       </div>
 
-      {/* Right Side - Auth Form */}
-      <div className="flex max-w-[448px] grow shrink-0 basis-0 flex-col items-center justify-center gap-6 rounded-md bg-card px-12 py-12 shadow-lg border border-border">
-        <div className="flex w-full flex-col items-center justify-center gap-8">
-          <span className="w-full text-2xl font-semibold text-foreground text-center">
-            {activeTab === "signup" ? "Create your account" : "Welcome back"}
-          </span>
+      {/* Right Panel - Auth Form */}
+      <div className="flex min-w-[448px] grow shrink-0 basis-0 flex-col items-center justify-center gap-8 self-stretch bg-background px-12 py-12 max-md:w-full max-md:min-w-0 max-md:grow max-md:shrink-0 max-md:basis-0 max-md:px-6 max-md:py-8">
+        <div className="flex w-full max-w-[384px] flex-col items-start gap-8">
+          {/* Header */}
+          <div className="flex w-full flex-col items-start gap-2">
+            <span className="w-full text-3xl font-bold text-foreground">
+              {activeTab === "signin" ? "Sign in to your account" : "Create your account"}
+            </span>
+            <div className="flex items-center gap-1">
+              <span className="text-sm text-muted-foreground">
+                {activeTab === "signin" ? "New to our platform?" : "Already have an account?"}
+              </span>
+              <button
+                type="button"
+                onClick={() => setActiveTab(activeTab === "signin" ? "signup" : "signin")}
+                className="text-sm font-medium text-primary hover:underline"
+              >
+                {activeTab === "signin" ? "Create an account" : "Sign in"}
+              </button>
+            </div>
+          </div>
 
+          {/* Sign In Form */}
           {activeTab === "signin" ? (
-            <form onSubmit={handleSignIn} className="flex w-full flex-col items-start justify-center gap-6">
+            <form onSubmit={handleSignIn} className="flex w-full flex-col items-start gap-4">
               <div className="w-full space-y-2">
-                <Label htmlFor="signin-email">Email</Label>
+                <Label htmlFor="signin-email">Email address</Label>
                 <Input
                   id="signin-email"
                   type="email"
@@ -179,50 +194,81 @@ const Auth = () => {
                 />
               </div>
               <div className="w-full space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="signin-password">Password</Label>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setResetEmail(email);
-                      setResetDialogOpen(true);
-                    }}
-                    className="text-xs text-primary hover:underline"
-                  >
-                    Forgot password?
-                  </button>
-                </div>
+                <Label htmlFor="signin-password">Password</Label>
                 <Input
                   id="signin-password"
                   type="password"
-                  placeholder="••••••••"
+                  placeholder="Enter your password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
                   className="h-10"
                 />
               </div>
-              <Button type="submit" className="h-10 w-full" disabled={isLoading}>
-                {isLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-                Sign In
-              </Button>
-              <div className="flex w-full flex-wrap items-center justify-center gap-1">
-                <span className="text-sm text-foreground">
-                  Don't have an account?
-                </span>
+              <div className="flex w-full items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <Checkbox 
+                    id="remember" 
+                    checked={rememberMe}
+                    onCheckedChange={(checked) => setRememberMe(checked as boolean)}
+                  />
+                  <label htmlFor="remember" className="text-sm text-muted-foreground cursor-pointer">
+                    Remember me
+                  </label>
+                </div>
                 <button
                   type="button"
-                  onClick={() => setActiveTab("signup")}
+                  onClick={() => {
+                    setResetEmail(email);
+                    setResetDialogOpen(true);
+                  }}
                   className="text-sm font-medium text-primary hover:underline"
                 >
-                  Sign Up
+                  Forgot password?
                 </button>
+              </div>
+
+              <div className="flex w-full flex-col items-start gap-3 pt-4">
+                <Button type="submit" className="h-10 w-full" disabled={isLoading}>
+                  {isLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                  Sign in
+                </Button>
+                
+                <div className="flex w-full items-center gap-3">
+                  <div className="flex h-px grow shrink-0 basis-0 bg-border" />
+                  <span className="text-xs text-muted-foreground">
+                    Or continue with
+                  </span>
+                  <div className="flex h-px grow shrink-0 basis-0 bg-border" />
+                </div>
+
+                <div className="flex w-full items-center gap-3">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="h-10 grow shrink-0 basis-0"
+                    onClick={() => toast.info("Google sign in coming soon")}
+                  >
+                    <Mail className="h-4 w-4 mr-2" />
+                    Google
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="h-10 grow shrink-0 basis-0"
+                    onClick={() => toast.info("GitHub sign in coming soon")}
+                  >
+                    <Github className="h-4 w-4 mr-2" />
+                    GitHub
+                  </Button>
+                </div>
               </div>
             </form>
           ) : (
-            <form onSubmit={handleSignUp} className="flex w-full flex-col items-start justify-center gap-6">
+            /* Sign Up Form */
+            <form onSubmit={handleSignUp} className="flex w-full flex-col items-start gap-4">
               <div className="w-full space-y-2">
-                <Label htmlFor="signup-name">Name <span className="text-destructive">*</span></Label>
+                <Label htmlFor="signup-name">Full Name <span className="text-destructive">*</span></Label>
                 <Input
                   id="signup-name"
                   type="text"
@@ -234,7 +280,7 @@ const Auth = () => {
                 />
               </div>
               <div className="w-full space-y-2">
-                <Label htmlFor="signup-email">Email <span className="text-destructive">*</span></Label>
+                <Label htmlFor="signup-email">Email address <span className="text-destructive">*</span></Label>
                 <Input
                   id="signup-email"
                   type="email"
@@ -250,7 +296,7 @@ const Auth = () => {
                 <Input
                   id="signup-password"
                   type="password"
-                  placeholder="••••••••"
+                  placeholder="Create a password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
@@ -270,24 +316,51 @@ const Auth = () => {
                   className="resize-none"
                 />
               </div>
-              <Button type="submit" className="h-10 w-full" disabled={isLoading}>
-                {isLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-                Create account
-              </Button>
-              <div className="flex w-full flex-wrap items-center justify-center gap-1">
-                <span className="text-sm text-foreground">
-                  Have an account?
-                </span>
-                <button
-                  type="button"
-                  onClick={() => setActiveTab("signin")}
-                  className="text-sm font-medium text-primary hover:underline"
-                >
-                  Sign In
-                </button>
+
+              <div className="flex w-full flex-col items-start gap-3 pt-4">
+                <Button type="submit" className="h-10 w-full" disabled={isLoading}>
+                  {isLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                  Create account
+                </Button>
+                
+                <div className="flex w-full items-center gap-3">
+                  <div className="flex h-px grow shrink-0 basis-0 bg-border" />
+                  <span className="text-xs text-muted-foreground">
+                    Or continue with
+                  </span>
+                  <div className="flex h-px grow shrink-0 basis-0 bg-border" />
+                </div>
+
+                <div className="flex w-full items-center gap-3">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="h-10 grow shrink-0 basis-0"
+                    onClick={() => toast.info("Google sign up coming soon")}
+                  >
+                    <Mail className="h-4 w-4 mr-2" />
+                    Google
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="h-10 grow shrink-0 basis-0"
+                    onClick={() => toast.info("GitHub sign up coming soon")}
+                  >
+                    <Github className="h-4 w-4 mr-2" />
+                    GitHub
+                  </Button>
+                </div>
               </div>
             </form>
           )}
+
+          {/* Terms */}
+          <div className="flex w-full flex-col items-center gap-2">
+            <span className="text-xs text-muted-foreground text-center">
+              By signing in, you agree to our Terms of Service and Privacy Policy
+            </span>
+          </div>
         </div>
       </div>
 
@@ -321,9 +394,7 @@ const Auth = () => {
                 Cancel
               </Button>
               <Button type="submit" disabled={isResetting}>
-                {isResetting ? (
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                ) : null}
+                {isResetting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
                 Send Reset Link
               </Button>
             </div>
