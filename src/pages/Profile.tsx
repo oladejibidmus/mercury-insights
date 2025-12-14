@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -11,7 +11,7 @@ import { Switch } from "@/components/ui/switch";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { User, BookOpen, Clock, Award, Bell, Lock, Trophy } from "lucide-react";
+import { User, BookOpen, Clock, Award, Bell, Lock, Trophy, Upload, Loader2 } from "lucide-react";
 import { AchievementsDisplay } from "@/components/achievements/AchievementsDisplay";
 import { useCheckAndAwardAchievements } from "@/hooks/useAchievements";
 
@@ -19,7 +19,7 @@ interface ProfileData {
   name: string;
   email: string;
   avatar_url: string;
-  bio?: string;
+  bio: string;
 }
 
 interface LearningStats {
@@ -28,10 +28,19 @@ interface LearningStats {
   certificatesEarned: number;
 }
 
+interface NotificationPreferences {
+  emailDigest: boolean;
+  forumReplies: boolean;
+  courseUpdates: boolean;
+  certificates: boolean;
+}
+
 export default function Profile() {
   const { user } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   const [profile, setProfile] = useState<ProfileData>({
     name: "",
@@ -46,10 +55,11 @@ export default function Profile() {
     certificatesEarned: 0
   });
 
-  const [notifications, setNotifications] = useState({
-    emailUpdates: true,
-    courseReminders: true,
-    forumReplies: true
+  const [notifications, setNotifications] = useState<NotificationPreferences>({
+    emailDigest: true,
+    forumReplies: true,
+    courseUpdates: true,
+    certificates: true
   });
 
   const [passwordForm, setPasswordForm] = useState({
@@ -82,8 +92,18 @@ export default function Profile() {
         name: data.name || "",
         email: data.email || user.email || "",
         avatar_url: data.avatar_url || "",
-        bio: ""
+        bio: data.bio || ""
       });
+      // Parse notification preferences
+      if (data.notification_preferences) {
+        const prefs = data.notification_preferences as unknown as NotificationPreferences;
+        setNotifications({
+          emailDigest: prefs.emailDigest ?? true,
+          forumReplies: prefs.forumReplies ?? true,
+          courseUpdates: prefs.courseUpdates ?? true,
+          certificates: prefs.certificates ?? true
+        });
+      }
     } else {
       setProfile(prev => ({
         ...prev,
@@ -134,27 +154,88 @@ export default function Profile() {
     });
   };
 
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+
+    // Validate file type
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please select an image file");
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Image must be less than 5MB");
+      return;
+    }
+
+    setIsUploading(true);
+    const fileExt = file.name.split(".").pop();
+    const filePath = `${user.id}/avatar.${fileExt}`;
+
+    // Upload to storage
+    const { error: uploadError } = await supabase.storage
+      .from("avatars")
+      .upload(filePath, file, { upsert: true });
+
+    if (uploadError) {
+      toast.error("Failed to upload image");
+      console.error(uploadError);
+      setIsUploading(false);
+      return;
+    }
+
+    // Get public URL
+    const { data: { publicUrl } } = supabase.storage
+      .from("avatars")
+      .getPublicUrl(filePath);
+
+    setProfile({ ...profile, avatar_url: publicUrl });
+    setIsUploading(false);
+    toast.success("Avatar uploaded successfully");
+  };
+
   const handleSaveProfile = async () => {
     if (!user) return;
     setIsSaving(true);
 
     const { error } = await supabase
       .from("profiles")
-      .upsert({
-        user_id: user.id,
+      .update({
         name: profile.name,
-        email: profile.email,
         avatar_url: profile.avatar_url,
+        bio: profile.bio,
         updated_at: new Date().toISOString()
-      }, {
-        onConflict: "user_id"
-      });
+      })
+      .eq("user_id", user.id);
 
     if (error) {
       toast.error("Failed to save profile");
       console.error(error);
     } else {
       toast.success("Profile updated successfully");
+    }
+    setIsSaving(false);
+  };
+
+  const handleSaveNotifications = async () => {
+    if (!user) return;
+    setIsSaving(true);
+
+    const { error } = await supabase
+      .from("profiles")
+      .update({
+        notification_preferences: notifications as unknown as Record<string, boolean>,
+        updated_at: new Date().toISOString()
+      })
+      .eq("user_id", user.id);
+
+    if (error) {
+      toast.error("Failed to save preferences");
+      console.error(error);
+    } else {
+      toast.success("Notification preferences saved");
     }
     setIsSaving(false);
   };
@@ -245,14 +326,29 @@ export default function Profile() {
                     </AvatarFallback>
                   </Avatar>
                   <div className="space-y-2">
-                    <Label htmlFor="avatar_url">Avatar URL</Label>
-                    <Input
-                      id="avatar_url"
-                      placeholder="https://example.com/avatar.jpg"
-                      value={profile.avatar_url}
-                      onChange={(e) => setProfile({ ...profile, avatar_url: e.target.value })}
-                      className="w-80"
-                    />
+                    <Label>Profile Picture</Label>
+                    <div className="flex gap-2">
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={handleAvatarUpload}
+                      />
+                      <Button
+                        variant="outline"
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={isUploading}
+                      >
+                        {isUploading ? (
+                          <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                        ) : (
+                          <Upload className="w-4 h-4 mr-2" />
+                        )}
+                        {isUploading ? "Uploading..." : "Upload Image"}
+                      </Button>
+                    </div>
+                    <p className="text-xs text-muted-foreground">Max 5MB. JPG, PNG, or GIF.</p>
                   </div>
                 </div>
 
@@ -360,22 +456,22 @@ export default function Profile() {
               <CardContent className="space-y-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="font-medium">Email Updates</p>
+                    <p className="font-medium">Weekly Email Digest</p>
                     <p className="text-sm text-muted-foreground">Receive weekly learning summaries</p>
                   </div>
                   <Switch
-                    checked={notifications.emailUpdates}
-                    onCheckedChange={(checked) => setNotifications({ ...notifications, emailUpdates: checked })}
+                    checked={notifications.emailDigest}
+                    onCheckedChange={(checked) => setNotifications({ ...notifications, emailDigest: checked })}
                   />
                 </div>
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="font-medium">Course Reminders</p>
-                    <p className="text-sm text-muted-foreground">Get reminded to continue your courses</p>
+                    <p className="font-medium">Course Updates</p>
+                    <p className="text-sm text-muted-foreground">Get notified about course changes</p>
                   </div>
                   <Switch
-                    checked={notifications.courseReminders}
-                    onCheckedChange={(checked) => setNotifications({ ...notifications, courseReminders: checked })}
+                    checked={notifications.courseUpdates}
+                    onCheckedChange={(checked) => setNotifications({ ...notifications, courseUpdates: checked })}
                   />
                 </div>
                 <div className="flex items-center justify-between">
@@ -388,6 +484,19 @@ export default function Profile() {
                     onCheckedChange={(checked) => setNotifications({ ...notifications, forumReplies: checked })}
                   />
                 </div>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-medium">Certificate Notifications</p>
+                    <p className="text-sm text-muted-foreground">Notify when you earn a certificate</p>
+                  </div>
+                  <Switch
+                    checked={notifications.certificates}
+                    onCheckedChange={(checked) => setNotifications({ ...notifications, certificates: checked })}
+                  />
+                </div>
+                <Button onClick={handleSaveNotifications} disabled={isSaving}>
+                  {isSaving ? "Saving..." : "Save Preferences"}
+                </Button>
               </CardContent>
             </Card>
           </TabsContent>
