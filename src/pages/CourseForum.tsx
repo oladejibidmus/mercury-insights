@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import { useForumPosts, useCreateForumPost, useUpvotePost, ForumPost } from "@/hooks/useForumPosts";
+import { useForumReplies, useCreateForumReply, useMarkAsAnswer } from "@/hooks/useForumReplies";
 import { useCourses } from "@/hooks/useCourses";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -36,8 +37,8 @@ import {
   ChevronRight,
   MessageCircle,
   Loader2,
+  Send,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
 
 type SortOption = "recent" | "upvoted" | "unanswered";
 type StatusFilter = "all" | "answered" | "unanswered";
@@ -123,6 +124,7 @@ const CourseForum = () => {
           thread={selectedThread}
           onBack={() => setSelectedThread(null)}
           user={user}
+          formatTimeAgo={formatTimeAgo}
         />
       </DashboardLayout>
     );
@@ -354,18 +356,31 @@ function ThreadDetail({
   thread,
   onBack,
   user,
+  formatTimeAgo,
 }: {
   thread: ForumPost;
   onBack: () => void;
   user: any;
+  formatTimeAgo: (timestamp: string) => string;
 }) {
-  const formatTimeAgo = (timestamp: string) => {
-    const diff = Date.now() - new Date(timestamp).getTime();
-    const hours = Math.floor(diff / (1000 * 60 * 60));
-    if (hours < 1) return "Just now";
-    if (hours < 24) return `${hours}h ago`;
-    const days = Math.floor(hours / 24);
-    return `${days}d ago`;
+  const navigate = useNavigate();
+  const { data: replies = [], isLoading } = useForumReplies(thread.id);
+  const createReply = useCreateForumReply();
+  const markAsAnswer = useMarkAsAnswer();
+
+  const [replyContent, setReplyContent] = useState("");
+
+  const handleSubmitReply = async () => {
+    if (!user) {
+      navigate("/auth");
+      return;
+    }
+    await createReply.mutateAsync({ postId: thread.id, content: replyContent });
+    setReplyContent("");
+  };
+
+  const handleMarkAsAnswer = async (replyId: string) => {
+    await markAsAnswer.mutateAsync({ replyId, postId: thread.id });
   };
 
   return (
@@ -391,6 +406,11 @@ function ThreadDetail({
                 {thread.course && (
                   <Badge variant="outline">{thread.course.title}</Badge>
                 )}
+                {thread.status === "answered" && (
+                  <Badge variant="default" className="gap-1">
+                    <CheckCircle className="w-3 h-3" /> Answered
+                  </Badge>
+                )}
               </div>
             </div>
           </div>
@@ -403,11 +423,95 @@ function ThreadDetail({
         </CardContent>
       </Card>
 
-      {/* Note about replies */}
+      {/* Replies Section */}
+      <div className="space-y-4 mb-6">
+        <h3 className="font-semibold text-lg flex items-center gap-2">
+          <MessageCircle className="w-5 h-5" />
+          {replies.length} {replies.length === 1 ? "Reply" : "Replies"}
+        </h3>
+
+        {isLoading ? (
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="w-6 h-6 animate-spin text-primary" />
+          </div>
+        ) : replies.length === 0 ? (
+          <Card>
+            <CardContent className="py-8 text-center text-muted-foreground">
+              No replies yet. Be the first to respond!
+            </CardContent>
+          </Card>
+        ) : (
+          replies.map((reply) => (
+            <Card
+              key={reply.id}
+              className={reply.is_answer ? "border-green-500 bg-green-500/5" : ""}
+            >
+              <CardContent className="p-4">
+                <div className="flex gap-4">
+                  <Avatar className="w-10 h-10">
+                    <AvatarImage src={reply.author?.avatar_url || undefined} />
+                    <AvatarFallback>{reply.author?.name?.[0] || "U"}</AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="font-medium">{reply.author?.name || "Anonymous"}</span>
+                      <span className="text-xs text-muted-foreground">
+                        {formatTimeAgo(reply.created_at)}
+                      </span>
+                      {reply.is_answer && (
+                        <Badge variant="default" className="gap-1 bg-green-600">
+                          <CheckCircle className="w-3 h-3" /> Accepted Answer
+                        </Badge>
+                      )}
+                    </div>
+                    <p className="text-foreground whitespace-pre-wrap mb-3">{reply.content}</p>
+                    <div className="flex items-center gap-2">
+                      {user && user.id === thread.author_id && !reply.is_answer && thread.status !== "answered" && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleMarkAsAnswer(reply.id)}
+                          disabled={markAsAnswer.isPending}
+                        >
+                          <CheckCircle className="w-3 h-3 mr-1" />
+                          Mark as Answer
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))
+        )}
+      </div>
+
+      {/* Reply Form */}
       <Card>
-        <CardContent className="p-6 text-center text-muted-foreground">
-          <MessageCircle className="w-8 h-8 mx-auto mb-2" />
-          <p>Reply functionality coming soon!</p>
+        <CardContent className="p-4">
+          <div className="space-y-4">
+            <Label>Your Reply</Label>
+            <Textarea
+              placeholder={user ? "Write your reply..." : "Sign in to reply"}
+              rows={4}
+              value={replyContent}
+              onChange={(e) => setReplyContent(e.target.value)}
+              disabled={!user}
+            />
+            <div className="flex justify-end">
+              <Button
+                onClick={handleSubmitReply}
+                disabled={!replyContent.trim() || createReply.isPending || !user}
+              >
+                {createReply.isPending ? (
+                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                ) : (
+                  <Send className="w-4 h-4 mr-2" />
+                )}
+                Post Reply
+              </Button>
+            </div>
+          </div>
         </CardContent>
       </Card>
     </div>
