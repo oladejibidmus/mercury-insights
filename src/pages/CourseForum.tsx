@@ -1,8 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import { useForumPosts, useCreateForumPost, useUpvotePost, ForumPost } from "@/hooks/useForumPosts";
 import { useForumReplies, useCreateForumReply, useMarkAsAnswer } from "@/hooks/useForumReplies";
+import { useForumRealtime, useTypingIndicator } from "@/hooks/useForumRealtime";
+import { useCheckAndAwardAchievements } from "@/hooks/useAchievements";
 import { useCourses } from "@/hooks/useCourses";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -12,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { TypingIndicator } from "@/components/forum/TypingIndicator";
 import {
   Select,
   SelectContent,
@@ -38,6 +41,7 @@ import {
   MessageCircle,
   Loader2,
   Send,
+  Radio,
 } from "lucide-react";
 
 type SortOption = "recent" | "upvoted" | "unanswered";
@@ -50,6 +54,7 @@ const CourseForum = () => {
   const { data: courses = [] } = useCourses();
   const createPost = useCreateForumPost();
   const upvotePost = useUpvotePost();
+  const checkAchievements = useCheckAndAwardAchievements();
 
   const [selectedCourse, setSelectedCourse] = useState("all");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
@@ -60,6 +65,9 @@ const CourseForum = () => {
   const [newPostContent, setNewPostContent] = useState("");
   const [newPostCourse, setNewPostCourse] = useState<string>("");
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
+
+  // Enable realtime updates
+  useForumRealtime(selectedThread?.id);
 
   const filteredPosts = posts
     .filter((post) => {
@@ -106,6 +114,8 @@ const CourseForum = () => {
     setNewPostContent("");
     setNewPostCourse("");
     setCreateDialogOpen(false);
+    // Check for achievements after creating a post
+    checkAchievements.mutate();
   };
 
   const handleUpvote = async (postId: string, e: React.MouseEvent) => {
