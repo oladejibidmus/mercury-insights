@@ -193,7 +193,33 @@ const CoursePlayerPage = () => {
       });
     }
 
-    toast.success("Lesson completed!");
+    // Auto-generate certificate when course is 100% complete
+    if (newProgress === 100) {
+      // Check if certificate already exists
+      const { data: existingCert } = await supabase
+        .from("certificates")
+        .select("id")
+        .eq("course_id", courseId)
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (!existingCert) {
+        // Generate unique credential ID
+        const credentialId = `CERT-${courseId.slice(0, 8).toUpperCase()}-${user.id.slice(0, 8).toUpperCase()}-${Date.now().toString(36).toUpperCase()}`;
+        
+        await supabase.from("certificates").insert({
+          course_id: courseId,
+          user_id: user.id,
+          credential_id: credentialId,
+        });
+
+        toast.success("🎉 Congratulations! You've earned a certificate!", {
+          duration: 5000,
+        });
+      }
+    } else {
+      toast.success("Lesson completed!");
+    }
   };
 
   const handleNavigate = (lessonId: string) => {
