@@ -2,11 +2,16 @@ import { createContext, useContext, useEffect, useState, ReactNode } from "react
 import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 
+interface SignUpMetadata {
+  name?: string;
+  bio?: string;
+}
+
 interface AuthContextType {
   user: User | null;
   session: Session | null;
   loading: boolean;
-  signUp: (email: string, password: string) => Promise<{ error: Error | null }>;
+  signUp: (email: string, password: string, metadata?: SignUpMetadata) => Promise<{ error: Error | null }>;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
 }
@@ -36,13 +41,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => subscription.unsubscribe();
   }, []);
 
-  const signUp = async (email: string, password: string) => {
+  const signUp = async (email: string, password: string, metadata?: SignUpMetadata) => {
     const redirectUrl = `${window.location.origin}/`;
     const { error } = await supabase.auth.signUp({
       email,
       password,
-      options: { emailRedirectTo: redirectUrl },
+      options: { 
+        emailRedirectTo: redirectUrl,
+        data: {
+          name: metadata?.name,
+          bio: metadata?.bio,
+        },
+      },
     });
+
+    // Send welcome email after successful signup
+    if (!error) {
+      try {
+        await supabase.functions.invoke('send-welcome-email', {
+          body: { email, name: metadata?.name || '' },
+        });
+      } catch (emailError) {
+        console.error('Failed to send welcome email:', emailError);
+        // Don't fail signup if email fails
+      }
+    }
+
     return { error };
   };
 
