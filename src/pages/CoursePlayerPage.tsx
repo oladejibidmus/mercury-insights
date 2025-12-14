@@ -216,6 +216,20 @@ const CoursePlayerPage = () => {
         toast.success("🎉 Congratulations! You've earned a certificate!", {
           duration: 5000,
         });
+
+        // Send course completion email notification
+        try {
+          await supabase.functions.invoke("send-course-completion-email", {
+            body: {
+              userId: user.id,
+              courseId,
+              courseTitle: course?.title || "Course",
+              credentialId,
+            },
+          });
+        } catch (emailError) {
+          console.error("Failed to send completion email:", emailError);
+        }
       }
     } else {
       toast.success("Lesson completed!");
