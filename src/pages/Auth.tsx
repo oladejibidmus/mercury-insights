@@ -29,14 +29,16 @@ const Auth = () => {
   const [resetDialogOpen, setResetDialogOpen] = useState(false);
   const [resetEmail, setResetEmail] = useState("");
   const [isResetting, setIsResetting] = useState(false);
+  const [justSignedUp, setJustSignedUp] = useState(false);
   const { user, signIn, signUp } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (user) {
+    // Don't auto-redirect if user just signed up - let them see the success message
+    if (user && !justSignedUp) {
       navigate("/explore-courses");
     }
-  }, [user, navigate]);
+  }, [user, navigate, justSignedUp]);
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -61,6 +63,7 @@ const Auth = () => {
       toast.error("Password must be at least 6 characters");
       return;
     }
+    setJustSignedUp(true);
     setIsLoading(true);
     const { error } = await signUp(email, password, { 
       name: fullName.trim(), 
@@ -68,10 +71,16 @@ const Auth = () => {
     });
     setIsLoading(false);
     if (error) {
+      setJustSignedUp(false);
       toast.error(error.message);
     } else {
-      toast.success("Account created successfully! Check your email for a welcome message.");
-      navigate("/");
+      toast.success("Account created successfully! Check your email for a welcome message.", {
+        duration: 4000,
+      });
+      // Delay navigation to let user see the success message
+      setTimeout(() => {
+        navigate("/explore-courses");
+      }, 2000);
     }
   };
 
