@@ -73,22 +73,43 @@ const Certificates = () => {
     }
   };
 
-  const handleShare = async (cert: typeof certificates[0]) => {
+  const handleShare = async (cert: typeof certificates[0], platform?: 'linkedin' | 'twitter' | 'copy') => {
     const shareUrl = `${window.location.origin}/verify-certificate/${cert.credential_id}`;
+    const shareText = `I just earned a certificate for completing ${cert.course?.title} on LearnHub!`;
     
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: `Certificate: ${cert.course?.title}`,
-          text: `I just earned a certificate for completing ${cert.course?.title} on LearnHub!`,
-          url: shareUrl,
-        });
-      } catch {
-        // User cancelled or share failed, copy to clipboard instead
+    switch (platform) {
+      case 'linkedin':
+        window.open(
+          `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(shareUrl)}`,
+          '_blank',
+          'width=600,height=400'
+        );
+        break;
+      case 'twitter':
+        window.open(
+          `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`,
+          '_blank',
+          'width=600,height=400'
+        );
+        break;
+      case 'copy':
         await copyToClipboard(cert.credential_id, shareUrl);
-      }
-    } else {
-      await copyToClipboard(cert.credential_id, shareUrl);
+        break;
+      default:
+        if (navigator.share) {
+          try {
+            await navigator.share({
+              title: `Certificate: ${cert.course?.title}`,
+              text: shareText,
+              url: shareUrl,
+            });
+          } catch {
+            // User cancelled or share failed, copy to clipboard instead
+            await copyToClipboard(cert.credential_id, shareUrl);
+          }
+        } else {
+          await copyToClipboard(cert.credential_id, shareUrl);
+        }
     }
   };
 

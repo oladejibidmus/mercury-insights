@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { AdminLayout } from "@/components/admin/AdminLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -7,13 +7,15 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import { Settings as SettingsIcon, Mail, Bell, Shield, Database, Upload, CheckCircle, AlertTriangle } from "lucide-react";
-import { toast } from "sonner";
+import { Settings as SettingsIcon, Mail, Bell, Shield, Database, Upload, CheckCircle, AlertTriangle, Loader2 } from "lucide-react";
+import { useAdminSettings, useUpdateAdminSettings } from "@/hooks/useAdminSettings";
 
 const Settings = () => {
+  const { data: settings, isLoading } = useAdminSettings();
+  const updateSettings = useUpdateAdminSettings();
+
   const [siteSettings, setSiteSettings] = useState({
     platformName: "LearnHub",
     description: "Your gateway to professional learning",
@@ -37,17 +39,36 @@ const Settings = () => {
     requireEmailVerification: false,
   });
 
+  // Sync state with fetched settings
+  useEffect(() => {
+    if (settings) {
+      setSiteSettings(settings.site);
+      setNotificationSettings(settings.notifications);
+      setAuthSettings(settings.auth);
+    }
+  }, [settings]);
+
   const handleSaveSiteSettings = () => {
-    toast.success("Site settings saved successfully");
+    updateSettings.mutate({ key: "site", value: siteSettings });
   };
 
   const handleSaveNotifications = () => {
-    toast.success("Notification settings saved successfully");
+    updateSettings.mutate({ key: "notifications", value: notificationSettings });
   };
 
   const handleSaveAuth = () => {
-    toast.success("Authentication settings saved successfully");
+    updateSettings.mutate({ key: "auth", value: authSettings });
   };
+
+  if (isLoading) {
+    return (
+      <AdminLayout>
+        <div className="flex items-center justify-center py-20">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        </div>
+      </AdminLayout>
+    );
+  }
 
   return (
     <AdminLayout>
@@ -124,7 +145,10 @@ const Settings = () => {
               </div>
               <Separator />
               <div className="flex justify-end">
-                <Button onClick={handleSaveSiteSettings}>Save Changes</Button>
+                <Button onClick={handleSaveSiteSettings} disabled={updateSettings.isPending}>
+                  {updateSettings.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                  Save Changes
+                </Button>
               </div>
             </CardContent>
           </Card>
@@ -215,7 +239,10 @@ const Settings = () => {
                 ))}
                 <Separator />
                 <div className="flex justify-end pt-4">
-                  <Button onClick={handleSaveNotifications}>Save Notification Settings</Button>
+                  <Button onClick={handleSaveNotifications} disabled={updateSettings.isPending}>
+                    {updateSettings.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                    Save Notification Settings
+                  </Button>
                 </div>
               </CardContent>
             </Card>
@@ -270,7 +297,10 @@ const Settings = () => {
               </div>
               <Separator />
               <div className="flex justify-end">
-                <Button onClick={handleSaveAuth}>Save Authentication Settings</Button>
+                <Button onClick={handleSaveAuth} disabled={updateSettings.isPending}>
+                  {updateSettings.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                  Save Authentication Settings
+                </Button>
               </div>
             </CardContent>
           </Card>
