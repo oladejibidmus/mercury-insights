@@ -184,7 +184,7 @@ const Index = () => {
         </header>
 
         {/* Dashboard Content */}
-        <div className="p-6 max-w-7xl mx-auto space-y-6">
+        <div className="px-6 py-6 space-y-6">
           {isLoading ? (
             <div className="flex items-center justify-center py-20">
               <Loader2 className="w-8 h-8 animate-spin text-primary" />
