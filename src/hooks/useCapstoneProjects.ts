@@ -127,3 +127,88 @@ export function useSubmitCapstone() {
     },
   });
 }
+
+// Admin hooks for managing capstone projects
+export function useCreateCapstoneProject() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (project: {
+      title: string;
+      description?: string;
+      instructions?: string;
+      course_id?: string;
+      due_date?: string;
+    }) => {
+      const { data, error } = await supabase
+        .from("capstone_projects")
+        .insert(project)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["capstone-projects"] });
+      toast.success("Capstone project created!");
+    },
+    onError: (error) => {
+      toast.error("Failed to create project: " + error.message);
+    },
+  });
+}
+
+export function useUpdateCapstoneProject() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      id,
+      ...updates
+    }: {
+      id: string;
+      title?: string;
+      description?: string;
+      instructions?: string;
+      course_id?: string;
+      due_date?: string;
+    }) => {
+      const { error } = await supabase
+        .from("capstone_projects")
+        .update(updates)
+        .eq("id", id);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["capstone-projects"] });
+      toast.success("Capstone project updated!");
+    },
+    onError: (error) => {
+      toast.error("Failed to update project: " + error.message);
+    },
+  });
+}
+
+export function useDeleteCapstoneProject() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from("capstone_projects")
+        .delete()
+        .eq("id", id);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["capstone-projects"] });
+      toast.success("Capstone project deleted!");
+    },
+    onError: (error) => {
+      toast.error("Failed to delete project: " + error.message);
+    },
+  });
+}

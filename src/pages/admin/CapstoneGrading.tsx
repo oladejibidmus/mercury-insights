@@ -1,8 +1,14 @@
 import { useState } from "react";
 import { AdminLayout } from "@/components/admin/AdminLayout";
-import { useCapstoneProjects, useCapstoneSubmissions } from "@/hooks/useCapstoneProjects";
+import { 
+  useCapstoneProjects, 
+  useCreateCapstoneProject, 
+  useUpdateCapstoneProject, 
+  useDeleteCapstoneProject 
+} from "@/hooks/useCapstoneProjects";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useAdminCourses } from "@/hooks/useAdminCourses";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,11 +16,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import {
   Table,
@@ -31,6 +39,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import {
@@ -41,6 +59,10 @@ import {
   Clock,
   AlertCircle,
   GraduationCap,
+  Plus,
+  Edit,
+  Trash2,
+  FolderKanban,
 } from "lucide-react";
 import { format } from "date-fns";
 
@@ -74,7 +96,11 @@ const statusConfig: Record<string, { label: string; variant: "default" | "second
 };
 
 export default function CapstoneGrading() {
-  const { data: projects = [] } = useCapstoneProjects();
+  const { data: projects = [], isLoading: projectsLoading } = useCapstoneProjects();
+  const { courses } = useAdminCourses();
+  const createProject = useCreateCapstoneProject();
+  const updateProject = useUpdateCapstoneProject();
+  const deleteProject = useDeleteCapstoneProject();
   const queryClient = useQueryClient();
 
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -84,6 +110,18 @@ export default function CapstoneGrading() {
     grade: "",
     feedback: "",
     revisionRequested: false,
+  });
+
+  // Project management state
+  const [projectDialogOpen, setProjectDialogOpen] = useState(false);
+  const [editingProject, setEditingProject] = useState<typeof projects[0] | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState<string | null>(null);
+  const [projectForm, setProjectForm] = useState({
+    title: "",
+    description: "",
+    instructions: "",
+    course_id: "",
+    due_date: "",
   });
 
   // Fetch all submissions (admin view)
@@ -189,19 +227,82 @@ export default function CapstoneGrading() {
     });
   };
 
+  // Project management handlers
+  const openCreateProjectDialog = () => {
+    setEditingProject(null);
+    setProjectForm({
+      title: "",
+      description: "",
+      instructions: "",
+      course_id: "",
+      due_date: "",
+    });
+    setProjectDialogOpen(true);
+  };
+
+  const openEditProjectDialog = (project: typeof projects[0]) => {
+    setEditingProject(project);
+    setProjectForm({
+      title: project.title,
+      description: project.description || "",
+      instructions: project.instructions || "",
+      course_id: project.course_id || "",
+      due_date: project.due_date ? project.due_date.split("T")[0] : "",
+    });
+    setProjectDialogOpen(true);
+  };
+
+  const handleSaveProject = async () => {
+    if (!projectForm.title.trim()) {
+      toast.error("Title is required");
+      return;
+    }
+
+    const projectData = {
+      title: projectForm.title,
+      description: projectForm.description || undefined,
+      instructions: projectForm.instructions || undefined,
+      course_id: projectForm.course_id || undefined,
+      due_date: projectForm.due_date ? new Date(projectForm.due_date).toISOString() : undefined,
+    };
+
+    if (editingProject) {
+      await updateProject.mutateAsync({ id: editingProject.id, ...projectData });
+    } else {
+      await createProject.mutateAsync(projectData);
+    }
+    setProjectDialogOpen(false);
+  };
+
+  const handleDeleteProject = async (id: string) => {
+    await deleteProject.mutateAsync(id);
+    setDeleteDialogOpen(null);
+  };
+
   return (
     <AdminLayout>
       <div className="space-y-6">
         {/* Header */}
-        <div>
-          <h1 className="text-3xl font-bold flex items-center gap-2">
-            <GraduationCap className="w-8 h-8 text-primary" />
-            Capstone Grading
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            Review and grade student capstone project submissions
-          </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold flex items-center gap-2">
+              <GraduationCap className="w-8 h-8 text-primary" />
+              Capstone Management
+            </h1>
+            <p className="text-muted-foreground mt-1">
+              Manage capstone projects and grade student submissions
+            </p>
+          </div>
         </div>
+
+        <Tabs defaultValue="submissions" className="space-y-6">
+          <TabsList>
+            <TabsTrigger value="submissions">Submissions ({submissions.length})</TabsTrigger>
+            <TabsTrigger value="projects">Projects ({projects.length})</TabsTrigger>
+          </TabsList>
+
+          {/* Submissions Tab */}
+          <TabsContent value="submissions" className="space-y-6">
 
         {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -370,6 +471,93 @@ export default function CapstoneGrading() {
             )}
           </CardContent>
         </Card>
+          </TabsContent>
+
+          {/* Projects Tab */}
+          <TabsContent value="projects" className="space-y-6">
+            <div className="flex justify-end">
+              <Button onClick={openCreateProjectDialog}>
+                <Plus className="w-4 h-4 mr-2" />
+                Add Project
+              </Button>
+            </div>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <FolderKanban className="w-5 h-5" />
+                  Capstone Projects
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {projectsLoading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="w-6 h-6 animate-spin text-primary" />
+                  </div>
+                ) : projects.length === 0 ? (
+                  <div className="text-center py-12">
+                    <FolderKanban className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                    <p className="text-muted-foreground">No capstone projects yet</p>
+                    <Button variant="outline" className="mt-4" onClick={openCreateProjectDialog}>
+                      Create First Project
+                    </Button>
+                  </div>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Title</TableHead>
+                        <TableHead>Course</TableHead>
+                        <TableHead>Due Date</TableHead>
+                        <TableHead>Submissions</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {projects.map((project) => {
+                        const submissionCount = submissions.filter(
+                          (s) => s.project_id === project.id
+                        ).length;
+                        return (
+                          <TableRow key={project.id}>
+                            <TableCell className="font-medium">{project.title}</TableCell>
+                            <TableCell>{project.course?.title || "—"}</TableCell>
+                            <TableCell>
+                              {project.due_date
+                                ? format(new Date(project.due_date), "MMM d, yyyy")
+                                : "—"}
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant="secondary">{submissionCount}</Badge>
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex items-center justify-end gap-2">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => openEditProjectDialog(project)}
+                                >
+                                  <Edit className="w-4 h-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => setDeleteDialogOpen(project.id)}
+                                >
+                                  <Trash2 className="w-4 h-4 text-destructive" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
 
         {/* Grading Dialog */}
         <Dialog open={!!selectedSubmission} onOpenChange={() => setSelectedSubmission(null)}>
@@ -463,6 +651,142 @@ export default function CapstoneGrading() {
             )}
           </DialogContent>
         </Dialog>
+
+        {/* Project Create/Edit Dialog */}
+        <Dialog open={projectDialogOpen} onOpenChange={setProjectDialogOpen}>
+          <DialogContent className="max-w-lg">
+            <DialogHeader>
+              <DialogTitle>
+                {editingProject ? "Edit Project" : "Create Project"}
+              </DialogTitle>
+              <DialogDescription>
+                {editingProject
+                  ? "Update the capstone project details"
+                  : "Create a new capstone project for students"}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 pt-2">
+              <div className="space-y-2">
+                <Label htmlFor="title">Title *</Label>
+                <Input
+                  id="title"
+                  placeholder="Project title..."
+                  value={projectForm.title}
+                  onChange={(e) =>
+                    setProjectForm({ ...projectForm, title: e.target.value })
+                  }
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="course">Linked Course</Label>
+                <Select
+                  value={projectForm.course_id}
+                  onValueChange={(value) =>
+                    setProjectForm({ ...projectForm, course_id: value })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a course (optional)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">No course</SelectItem>
+                    {courses.map((course) => (
+                      <SelectItem key={course.id} value={course.id}>
+                        {course.title}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="due_date">Due Date</Label>
+                <Input
+                  id="due_date"
+                  type="date"
+                  value={projectForm.due_date}
+                  onChange={(e) =>
+                    setProjectForm({ ...projectForm, due_date: e.target.value })
+                  }
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="description">Description</Label>
+                <Textarea
+                  id="description"
+                  placeholder="Brief description of the project..."
+                  rows={2}
+                  value={projectForm.description}
+                  onChange={(e) =>
+                    setProjectForm({ ...projectForm, description: e.target.value })
+                  }
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="instructions">Instructions</Label>
+                <Textarea
+                  id="instructions"
+                  placeholder="Detailed instructions for students..."
+                  rows={4}
+                  value={projectForm.instructions}
+                  onChange={(e) =>
+                    setProjectForm({ ...projectForm, instructions: e.target.value })
+                  }
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2">
+                <Button variant="outline" onClick={() => setProjectDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleSaveProject}
+                  disabled={createProject.isPending || updateProject.isPending}
+                >
+                  {createProject.isPending || updateProject.isPending ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : editingProject ? (
+                    "Save Changes"
+                  ) : (
+                    "Create Project"
+                  )}
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Delete Confirmation Dialog */}
+        <AlertDialog
+          open={!!deleteDialogOpen}
+          onOpenChange={() => setDeleteDialogOpen(null)}
+        >
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete Project?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This action cannot be undone. This will permanently delete the
+                capstone project and may affect student submissions.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => deleteDialogOpen && handleDeleteProject(deleteDialogOpen)}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                {deleteProject.isPending ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  "Delete"
+                )}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </AdminLayout>
   );

@@ -68,6 +68,20 @@ export function useCourseActions() {
       return false;
     }
 
+    // Increment enrollment count on the course
+    const { data: courseData } = await supabase
+      .from("courses")
+      .select("enrollment_count")
+      .eq("id", courseId)
+      .single();
+
+    if (courseData) {
+      await supabase
+        .from("courses")
+        .update({ enrollment_count: (courseData.enrollment_count || 0) + 1 })
+        .eq("id", courseId);
+    }
+
     setEnrolledCourses((prev) => [...prev, courseId]);
     toast.success("Enrolled successfully!");
     return true;
